@@ -41,7 +41,8 @@
     --gradient-top: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
     --glass: rgba(255, 255, 255, 0.1);
     --glass-border: rgba(255, 255, 255, 0.15);
-    --like-color: 227 100% 70%;
+    --like-color: 350 89% 60%;
+    --notification-color: 350 89% 60%;
     --save-color: 45 100% 60%;
 
     --sidebar-background: 0 0% 5%;

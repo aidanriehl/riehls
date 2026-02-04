@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Camera } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -69,9 +69,9 @@ export function ProfileSettingsSheet({
               />
               <button
                 onClick={handlePhotoChange}
-                className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-primary-foreground"
+                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center border-2 border-background"
               >
-                <Camera className="w-4 h-4" />
+                <Plus className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
             <button

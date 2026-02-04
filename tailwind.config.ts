@@ -50,7 +50,8 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        like: "hsl(var(--like-color))",
+        like: "hsl(350, 89%, 60%)",
+        notification: "hsl(350, 89%, 60%)",
         save: "hsl(var(--save-color))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
