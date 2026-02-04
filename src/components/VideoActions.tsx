@@ -94,7 +94,7 @@ export function VideoActions({ video, onLike, onComment, onSave, onShare }: Vide
 
       {/* Share */}
       <button
-        onClick={onShare}
+        onClick={(e) => { e.stopPropagation(); onShare(); }}
         className="flex flex-col items-center gap-1 transition-transform active:scale-90"
       >
         <div className="p-2 rounded-full">
