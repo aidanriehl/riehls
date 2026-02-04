@@ -9,8 +9,10 @@ import { cn } from '@/lib/utils';
 
 type Tab = 'saved' | 'notifications';
 
+const DEFAULT_TAB: Tab = 'notifications';
+
 const Profile = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('saved');
+  const [activeTab, setActiveTab] = useState<Tab>(DEFAULT_TAB);
   const { getSavedVideos } = useVideos();
   const savedVideos = getSavedVideos();
 
@@ -18,8 +20,7 @@ const Profile = () => {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center justify-between px-4 h-14">
-          <h1 className="text-lg font-bold">@{mockCreator.username}</h1>
+        <div className="flex items-center justify-end px-4 h-14">
           <button className="p-2 -mr-2">
             <Settings className="w-5 h-5" />
           </button>
@@ -44,18 +45,6 @@ const Profile = () => {
       {/* Tabs */}
       <div className="flex border-b border-border">
         <button
-          onClick={() => setActiveTab('saved')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
-            activeTab === 'saved'
-              ? 'border-foreground text-foreground'
-              : 'border-transparent text-muted-foreground'
-          )}
-        >
-          <Bookmark className="w-5 h-5" />
-          <span className="font-medium">Saved</span>
-        </button>
-        <button
           onClick={() => setActiveTab('notifications')}
           className={cn(
             'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
@@ -66,6 +55,18 @@ const Profile = () => {
         >
           <Bell className="w-5 h-5" />
           <span className="font-medium">Activity</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('saved')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
+            activeTab === 'saved'
+              ? 'border-foreground text-foreground'
+              : 'border-transparent text-muted-foreground'
+          )}
+        >
+          <Bookmark className="w-5 h-5" />
+          <span className="font-medium">Saved</span>
         </button>
       </div>
 
