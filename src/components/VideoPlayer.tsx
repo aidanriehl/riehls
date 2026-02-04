@@ -146,7 +146,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
       )}
 
       {/* Actions sidebar */}
-      <div className="absolute right-3 bottom-28">
+      <div className="absolute right-3 bottom-28 z-20">
         <VideoActions
           video={video}
           onLike={onLike}
