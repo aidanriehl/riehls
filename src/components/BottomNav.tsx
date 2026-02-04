@@ -1,4 +1,4 @@
-import { Home, User } from 'lucide-react';
+import { UtensilsCrossed, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -6,7 +6,7 @@ export function BottomNav() {
   const location = useLocation();
 
   const navItems = [
-    { icon: Home, label: 'Home', path: '/' },
+    { icon: UtensilsCrossed, label: 'Feed', path: '/' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];
 

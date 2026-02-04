@@ -26,7 +26,7 @@ export function VideoCaption({ caption, createdAt }: VideoCaptionProps) {
         onClick={() => navigate('/creator')}
         className="font-semibold text-sm mb-1 block"
       >
-        @aidan
+        aidan
       </button>
 
       {/* Caption */}

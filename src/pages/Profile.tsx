@@ -6,6 +6,7 @@ import { NotificationsList } from '@/components/NotificationsList';
 import { mockCreator } from '@/data/mockData';
 import { useVideos } from '@/hooks/useVideos';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 type Tab = 'saved' | 'notifications';
 
@@ -15,13 +16,21 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState<Tab>(DEFAULT_TAB);
   const { getSavedVideos } = useVideos();
   const savedVideos = getSavedVideos();
+  const { toast } = useToast();
+
+  const handleSettingsClick = () => {
+    toast({
+      title: "Settings coming soon",
+      description: "We're working on this feature!",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="flex items-center justify-end px-4 h-14">
-          <button className="p-2 -mr-2">
+          <button className="p-2 -mr-2" onClick={handleSettingsClick}>
             <Settings className="w-5 h-5" />
           </button>
         </div>
