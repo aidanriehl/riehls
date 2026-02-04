@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { mockCreator } from '@/data/mockData';
 
 interface VideoCaptionProps {
   caption: string;
@@ -17,17 +17,27 @@ export function VideoCaption({ caption, createdAt }: VideoCaptionProps) {
     ? caption 
     : caption.slice(0, maxLength) + '...';
 
-  const formattedDate = format(new Date(createdAt), 'MMM d');
-
   return (
-    <div className="max-w-[80%]">
-      {/* Username */}
-      <button 
-        onClick={() => navigate('/creator')}
-        className="font-semibold text-sm mb-1 block"
-      >
-        aidan
-      </button>
+    <div className="max-w-[85%]">
+      {/* Username row with avatar */}
+      <div className="flex items-center gap-2 mb-2">
+        <button 
+          onClick={() => navigate('/creator')}
+          className="font-semibold text-sm"
+        >
+          aidan
+        </button>
+        <button
+          onClick={() => navigate('/creator')}
+          className="flex-shrink-0"
+        >
+          <img
+            src={mockCreator.avatarUrl}
+            alt={mockCreator.username}
+            className="w-8 h-8 rounded-lg object-cover"
+          />
+        </button>
+      </div>
 
       {/* Caption */}
       <p className="text-sm leading-relaxed">
@@ -41,9 +51,6 @@ export function VideoCaption({ caption, createdAt }: VideoCaptionProps) {
           </button>
         )}
       </p>
-
-      {/* Date */}
-      <p className="text-xs text-muted-foreground mt-1">{formattedDate}</p>
     </div>
   );
 }
