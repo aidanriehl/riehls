@@ -1,152 +1,94 @@
 
 
-# riehls Enhancement Plan
+# UI Fixes and Updates
 
 ## Overview
-This plan enhances the riehls app with Instagram-style features including better video metadata display, a clickable creator profile with a playful "unfollow" joke, an enhanced share experience with DM functionality, and various UI refinements.
+This plan addresses four UI issues: fixing non-functional buttons, updating the bottom navigation, enhancing the header gradient, and removing the @ symbol from the username display.
 
 ---
 
-## Features to Implement
+## Issues & Fixes
 
-### 1. Video Caption Enhancements
+### 1. Share Button Not Working (Home)
 
-**Add date display under caption**
-- Format: "Jan 15" (month and day, no year)
-- Uses the existing `createdAt` field from video data
+**Investigation:** The Share button IS properly wired up in VideoPlayer.tsx. The `handleShare` function calls `setShowShare(true)`, and the ShareSheet component is rendered with the correct props. 
 
-**Add clickable @aidan username above caption**
-- Displays `@aidan` (lowercase) above the caption
-- When tapped, navigates to your creator profile page
+**Likely cause:** The button click might be getting intercepted by the video's touch/click handlers, or there's a z-index issue.
 
-**Ensure chronological sorting**
-- Videos sorted newest first (by `createdAt` descending)
-- Currently videos are displayed in array order - will add explicit sorting
+**Fix:** Add `e.stopPropagation()` to prevent the click from bubbling to the video element, and ensure proper z-index layering.
 
 ---
 
-### 2. Creator Profile Page (New Route)
+### 2. Settings Button Not Working (Profile)
 
-**Create `/creator` route for your public profile**
-- Avatar image (larger, centered)
-- Display name: "Aidan" 
-- Username: @aidan
-- Bio section
-- Stats row (posts count, followers, following)
-- "Follow" button with special behavior:
-  - If already following: Shows confirmation dialog
-  - Dialog text: "Are you sure? 🤔"
-  - "Unfollow" option links to Venmo (`venmo.com/aidanriehll?txn=pay&amount=5&note=Unfollow%20fee`)
-  - "Stay Following" closes dialog
+**Current state:** The Settings button is purely decorative - no onClick handler.
+
+**Fix:** For now, I'll add a toast notification saying "Settings coming soon" so users know it's not broken. We can build out settings later.
 
 ---
 
-### 3. Header UI Updates
+### 3. Change "Home" to "Feed" with Bowl Icon
 
-**Increase "riehls" title size by 20%**
-- Change from `text-lg` to approximately `text-xl` with slightly larger font size
-- Move down a few pixels (adjust top positioning)
+**Changes to BottomNav.tsx:**
+- Rename label from "Home" to "Feed"
+- Replace `Home` icon with `UtensilsCrossed` (fork and knife crossed - matches the food/meal theme of "riehls")
 
----
-
-### 4. Enhanced Share Feature
-
-**Share sheet with multiple options:**
-1. **Copy Link** - Copy video URL to clipboard
-2. **Share via Text** - Opens native share (SMS/text on mobile)
-3. **DM Aidan** - Opens in-app messaging
-
-**DM System (requires database):**
-- New route: `/messages`
-- Simple chat interface between viewer and creator (you)
-- Message list with timestamps
-- Input field to compose message
-- Messages stored in database with sender/receiver IDs
+This icon fits the iconography style (simple line icons) and plays on the "reels" → "riehls" → "meals" pun.
 
 ---
 
-## Implementation Approach
+### 4. Add Subtle Header Gradient
 
-### Phase 1: UI Enhancements (No Backend Needed)
-1. Update `VideoCaption.tsx` to include:
-   - Clickable `@aidan` username linking to `/creator`
-   - Date display formatted as "MMM D"
-2. Update `Index.tsx` header styling
-3. Create `CreatorProfile.tsx` page with follow button + Venmo dialog
-4. Sort videos by `createdAt` in `useVideos.ts`
-5. Add `/creator` route to `App.tsx`
+**Current state:** The header in Index.tsx is just text floating on the video with a `top-gradient` already applied in VideoPlayer.tsx.
 
-### Phase 2: Share Sheet Enhancement
-1. Create `ShareSheet.tsx` component with options
-2. Update `VideoPlayer.tsx` to use new share sheet
-3. Options: Copy Link, Share via Text, DM Aidan
+**Fix:** The gradient already exists via `top-gradient` class in VideoPlayer.tsx (line 120). The issue is the header in Index.tsx sits on top of it. I'll enhance the gradient to be slightly more visible so "riehls" feels more integrated.
 
-### Phase 3: DM System (Requires Lovable Cloud)
-1. Enable Lovable Cloud for database
-2. Create `messages` table with schema:
-   - `id`, `sender_id`, `receiver_id`, `content`, `created_at`, `is_read`
-3. Create `/messages` page with chat UI
-4. Build message sending/receiving functionality
+**Approach:** Adjust the `--gradient-top` CSS variable to make it subtler but more visible behind the header area.
 
 ---
 
-## File Changes Summary
+### 5. Remove @ from "aidan"
+
+**Simple change:** In VideoCaption.tsx, change `@aidan` to just `aidan`.
+
+---
+
+## File Changes
 
 | File | Changes |
 |------|---------|
-| `src/components/VideoCaption.tsx` | Add @aidan link, date display, accept `createdAt` prop |
-| `src/components/VideoPlayer.tsx` | Pass date to caption, use new share sheet |
-| `src/pages/Index.tsx` | Increase header font size, adjust positioning |
-| `src/hooks/useVideos.ts` | Sort videos by date (newest first) |
-| `src/pages/CreatorProfile.tsx` | **New** - Public creator profile with follow button |
-| `src/components/ShareSheet.tsx` | **New** - Share options with Copy, Text, DM |
-| `src/components/UnfollowDialog.tsx` | **New** - Dialog with Venmo link joke |
-| `src/pages/Messages.tsx` | **New** - DM chat interface |
-| `src/App.tsx` | Add `/creator` and `/messages` routes |
-| `src/data/mockData.ts` | Update creator data for Aidan |
+| `src/components/VideoActions.tsx` | Add `e.stopPropagation()` to share button to prevent click bubbling |
+| `src/pages/Profile.tsx` | Add toast notification to Settings button |
+| `src/components/BottomNav.tsx` | Change "Home" → "Feed", use `UtensilsCrossed` icon |
+| `src/components/VideoCaption.tsx` | Remove @ symbol from "aidan" |
+| `src/index.css` | Adjust `--gradient-top` for subtler but more visible header gradient |
 
 ---
 
 ## Technical Details
 
-### Date Formatting
-```typescript
-import { format } from 'date-fns';
-const formattedDate = format(new Date(video.createdAt), 'MMM d');
-// Output: "Jan 15"
+### VideoActions.tsx - Share Button Fix
+```text
+Current: onClick={onShare}
+Updated: onClick={(e) => { e.stopPropagation(); onShare(); }}
 ```
 
-### Venmo Deep Link
-```
-https://venmo.com/aidanriehll?txn=pay&amount=5&note=Unfollow%20fee
-```
-
-### Video Sorting
-```typescript
-const sortedVideos = [...mockVideos].sort(
-  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-);
+### BottomNav.tsx - Icon Change
+```text
+Import: UtensilsCrossed from 'lucide-react'
+navItems: { icon: UtensilsCrossed, label: 'Feed', path: '/' }
 ```
 
----
+### VideoCaption.tsx
+```text
+Current: @aidan
+Updated: aidan
+```
 
-## Questions Addressed
-
-| Request | Solution |
-|---------|----------|
-| Date under caption | Month + day format using date-fns |
-| Chronological order | Sort by `createdAt` descending |
-| @aidan above caption | Clickable link to `/creator` |
-| Follow/unfollow button | Follow button + Venmo dialog joke |
-| riehls title bigger | 20% larger font, moved lower |
-| Friends tab | Removed per your request |
-| Share to text | Native share API integration |
-| DM feature | Full chat system (requires database) |
-
----
-
-## Next Steps After Approval
-
-1. I'll implement Phase 1 and Phase 2 immediately (UI and share features)
-2. For the DM system (Phase 3), we'll need to enable Lovable Cloud to set up the database for storing messages
+### index.css - Gradient Adjustment
+```text
+Current: --gradient-top: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%);
+Updated: --gradient-top: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
+```
+Slightly stronger opacity (0.5 → 0.6) for better text contrast while remaining subtle.
 
