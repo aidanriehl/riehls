@@ -44,6 +44,8 @@
     --like-color: 350 89% 60%;
     --notification-color: 350 89% 60%;
     --save-color: 45 100% 60%;
+    --dm-sent: 263 70% 50%;
+    --dm-sent-foreground: 0 0% 100%;
 
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 100%;
