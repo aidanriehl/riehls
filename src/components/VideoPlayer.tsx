@@ -4,7 +4,7 @@ import { Video } from '@/types';
 import { VideoActions } from './VideoActions';
 import { VideoCaption } from './VideoCaption';
 import { CommentsSheet } from './CommentsSheet';
-import { toast } from 'sonner';
+import { ShareSheet } from './ShareSheet';
 
 interface VideoPlayerProps {
   video: Video;
@@ -17,6 +17,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [doubleTapHeart, setDoubleTapHeart] = useState(false);
   const [isSpeedUp, setIsSpeedUp] = useState(false);
   const lastTapRef = useRef<number>(0);
@@ -97,16 +98,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
   };
 
   const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: 'Check out this video!',
-        text: video.caption,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success('Link copied to clipboard!');
-    }
+    setShowShare(true);
   };
 
   return (
@@ -166,7 +158,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
 
       {/* Caption */}
       <div className="absolute left-4 bottom-24 pr-16">
-        <VideoCaption caption={video.caption} />
+        <VideoCaption caption={video.caption} createdAt={video.createdAt} />
       </div>
 
       {/* Comments sheet */}
@@ -174,6 +166,13 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
         videoId={video.id}
         isOpen={showComments}
         onClose={() => setShowComments(false)}
+      />
+
+      {/* Share sheet */}
+      <ShareSheet
+        open={showShare}
+        onOpenChange={setShowShare}
+        videoCaption={video.caption}
       />
     </div>
   );
