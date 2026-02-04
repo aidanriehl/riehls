@@ -2,8 +2,8 @@ import { Video, Comment, User, Notification } from '@/types';
 
 export const mockCreator: User = {
   id: 'creator-1',
-  username: 'riehl',
-  displayName: 'Riehl',
+  username: 'aidan',
+  displayName: 'Aidan',
   avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop',
   bio: 'Creating moments worth sharing ✨',
   isAdmin: true,

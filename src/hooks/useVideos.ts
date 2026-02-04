@@ -1,9 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Video } from '@/types';
 import { mockVideos } from '@/data/mockData';
 
+// Sort videos by createdAt descending (newest first)
+const sortedMockVideos = [...mockVideos].sort(
+  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+);
+
 export function useVideos() {
-  const [videos, setVideos] = useState<Video[]>(mockVideos);
+  const [videos, setVideos] = useState<Video[]>(sortedMockVideos);
 
   const toggleLike = useCallback((videoId: string) => {
     setVideos((prev) =>
