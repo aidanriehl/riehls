@@ -15,8 +15,8 @@ interface Message {
 
 const SUGGESTIONS = [
   'low key you\'re bad 😈',
-  'You up?',
-  'like for tbh?',
+  'You up? 🧐',
+  'like for tbh? 🤝',
 ];
 
 const Messages = () => {
@@ -164,11 +164,6 @@ const Messages = () => {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Start a conversation
-          </div>
-        )}
         {messages.map((message) => {
           const replyMessage = message.replyToId ? getReplyMessage(message.replyToId) : null;
           const isSwipingThis = swipeState?.id === message.id;
