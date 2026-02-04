@@ -1,0 +1,151 @@
+import { useState } from 'react';
+import { X, Heart, Send } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { mockComments } from '@/data/mockData';
+import { Comment } from '@/types';
+import { cn } from '@/lib/utils';
+
+interface CommentsSheetProps {
+  videoId: string;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function formatTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d`;
+  return `${Math.floor(seconds / 604800)}w`;
+}
+
+export function CommentsSheet({ videoId, isOpen, onClose }: CommentsSheetProps) {
+  const [comments, setComments] = useState<Comment[]>(
+    mockComments.filter((c) => c.videoId === videoId)
+  );
+  const [newComment, setNewComment] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+
+    const comment: Comment = {
+      id: `c${Date.now()}`,
+      videoId,
+      userId: 'current-user',
+      username: 'you',
+      avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop',
+      text: newComment,
+      createdAt: new Date().toISOString(),
+      likeCount: 0,
+      isLiked: false,
+    };
+
+    setComments([comment, ...comments]);
+    setNewComment('');
+  };
+
+  const toggleCommentLike = (commentId: string) => {
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === commentId
+          ? {
+              ...c,
+              isLiked: !c.isLiked,
+              likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1,
+            }
+          : c
+      )
+    );
+  };
+
+  return (
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent 
+        side="bottom" 
+        className="h-[70vh] rounded-t-3xl bg-card border-border px-0"
+      >
+        <SheetHeader className="px-4 pb-4 border-b border-border">
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-lg font-semibold">
+              {comments.length} comments
+            </SheetTitle>
+            <button onClick={onClose} className="p-2 -mr-2">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </SheetHeader>
+
+        {/* Comments list */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 max-h-[calc(70vh-140px)]">
+          {comments.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>No comments yet</p>
+              <p className="text-sm mt-1">Be the first to comment!</p>
+            </div>
+          ) : (
+            comments.map((comment) => (
+              <div key={comment.id} className="flex gap-3">
+                <img
+                  src={comment.avatarUrl}
+                  alt={comment.username}
+                  className="w-9 h-9 rounded-full flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">{comment.username}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatTimeAgo(comment.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm mt-0.5">{comment.text}</p>
+                  <button
+                    onClick={() => toggleCommentLike(comment.id)}
+                    className="flex items-center gap-1 mt-1 text-xs text-muted-foreground"
+                  >
+                    <Heart
+                      className={cn(
+                        'w-3.5 h-3.5',
+                        comment.isLiked && 'fill-like text-like'
+                      )}
+                    />
+                    {comment.likeCount > 0 && <span>{comment.likeCount}</span>}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Comment input */}
+        <form
+          onSubmit={handleSubmit}
+          className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t border-border"
+        >
+          <div className="flex gap-2">
+            <Input
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add a comment..."
+              className="flex-1 bg-secondary border-0 focus-visible:ring-1 focus-visible:ring-primary"
+            />
+            <Button 
+              type="submit" 
+              size="icon" 
+              disabled={!newComment.trim()}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
