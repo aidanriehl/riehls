@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -66,13 +65,11 @@ const Messages = () => {
         <button onClick={() => navigate(-1)} className="p-2 -ml-2">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <Avatar className="w-8 h-8">
+        <Avatar className="w-10 h-10">
           <AvatarImage src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop" />
           <AvatarFallback>A</AvatarFallback>
         </Avatar>
-        <div className="flex-1">
-          <span className="font-semibold">aidan</span>
-        </div>
+        <span className="font-semibold">aidan</span>
       </header>
 
       {/* Messages */}
@@ -104,22 +101,21 @@ const Messages = () => {
 
       {/* Input */}
       <div className="sticky bottom-0 p-4 border-t border-border bg-background">
-        <div className="flex gap-2">
+        <div className="flex gap-3 items-center">
           <Input
             placeholder="Message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            className="flex-1 rounded-full"
+            className="flex-1 rounded-full bg-transparent border-muted-foreground/30"
           />
-          <Button
-            size="icon"
+          <button
             onClick={handleSend}
             disabled={!newMessage.trim()}
-            className="rounded-full"
+            className="w-11 h-11 rounded-full bg-primary flex items-center justify-center disabled:opacity-50"
           >
-            <Send className="w-4 h-4" />
-          </Button>
+            <Send className="w-5 h-5 text-primary-foreground" />
+          </button>
         </div>
       </div>
     </div>
