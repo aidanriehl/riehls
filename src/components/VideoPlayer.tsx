@@ -1,10 +1,9 @@
 import { useRef, useState, useEffect } from 'react';
-import { Volume2, VolumeX, Play, Heart } from 'lucide-react';
+import { Play, Heart } from 'lucide-react';
 import { Video } from '@/types';
 import { VideoActions } from './VideoActions';
 import { VideoCaption } from './VideoCaption';
 import { CommentsSheet } from './CommentsSheet';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface VideoPlayerProps {
@@ -16,11 +15,12 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [doubleTapHeart, setDoubleTapHeart] = useState(false);
+  const [isSpeedUp, setIsSpeedUp] = useState(false);
   const lastTapRef = useRef<number>(0);
+  const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const videoElement = videoRef.current;
@@ -66,9 +66,34 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
     lastTapRef.current = now;
   };
 
-  const toggleMute = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsMuted(!isMuted);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const screenWidth = window.innerWidth;
+    const touchX = touch.clientX;
+
+    // Check if touch is in the right 30% of the screen
+    if (touchX > screenWidth * 0.7) {
+      holdTimeoutRef.current = setTimeout(() => {
+        const videoElement = videoRef.current;
+        if (videoElement) {
+          videoElement.playbackRate = 2;
+          setIsSpeedUp(true);
+        }
+      }, 200); // Small delay to distinguish from tap
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    
+    const videoElement = videoRef.current;
+    if (videoElement) {
+      videoElement.playbackRate = 1;
+    }
+    setIsSpeedUp(false);
   };
 
   const handleShare = () => {
@@ -92,9 +117,10 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
         src={video.videoUrl}
         className="absolute inset-0 w-full h-full object-cover"
         loop
-        muted={isMuted}
         playsInline
         onClick={handleTap}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         poster={video.thumbnailUrl}
       />
 
@@ -111,24 +137,21 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
         </div>
       )}
 
+      {/* 2x speed indicator */}
+      {isSpeedUp && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 pointer-events-none">
+          <div className="px-3 py-1.5 rounded-full bg-background/50 backdrop-blur-sm">
+            <span className="text-sm font-semibold">2x</span>
+          </div>
+        </div>
+      )}
+
       {/* Double tap heart */}
       {doubleTapHeart && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <Heart className="w-24 h-24 fill-like text-like heart-burst" />
         </div>
       )}
-
-      {/* Mute button */}
-      <button
-        onClick={toggleMute}
-        className="absolute top-4 right-4 p-2.5 rounded-full glass"
-      >
-        {isMuted ? (
-          <VolumeX className="w-5 h-5" />
-        ) : (
-          <Volume2 className="w-5 h-5" />
-        )}
-      </button>
 
       {/* Actions sidebar */}
       <div className="absolute right-3 bottom-28">
