@@ -3,10 +3,10 @@ import { Settings, Bookmark, Bell } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
 import { SavedVideos } from '@/components/SavedVideos';
 import { NotificationsList } from '@/components/NotificationsList';
+import { ProfileSettingsSheet } from '@/components/ProfileSettingsSheet';
 import { mockCreator } from '@/data/mockData';
 import { useVideos } from '@/hooks/useVideos';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 
 type Tab = 'saved' | 'notifications';
 
@@ -16,37 +16,39 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState<Tab>(DEFAULT_TAB);
   const { getSavedVideos } = useVideos();
   const savedVideos = getSavedVideos();
-  const { toast } = useToast();
+  const [showSettings, setShowSettings] = useState(false);
+  const [profile, setProfile] = useState({
+    avatarUrl: mockCreator.avatarUrl,
+    displayName: mockCreator.displayName,
+    bio: mockCreator.bio,
+  });
 
-  const handleSettingsClick = () => {
-    toast({
-      title: "Settings coming soon",
-      description: "We're working on this feature!",
-    });
+  const handleProfileSave = (newProfile: typeof profile) => {
+    setProfile(newProfile);
   };
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center justify-end px-4 h-14">
-          <button className="p-2 -mr-2" onClick={handleSettingsClick}>
+      {/* Header - minimal, no border */}
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg">
+        <div className="flex items-center justify-end px-4 h-11">
+          <button className="p-2 -mr-2" onClick={() => setShowSettings(true)}>
             <Settings className="w-5 h-5" />
           </button>
         </div>
       </header>
 
-      {/* Profile info */}
-      <div className="px-4 py-6">
+      {/* Profile info - reduced top padding */}
+      <div className="px-4 py-3">
         <div className="flex items-center gap-4">
           <img
-            src={mockCreator.avatarUrl}
-            alt={mockCreator.displayName}
+            src={profile.avatarUrl}
+            alt={profile.displayName}
             className="w-20 h-20 rounded-full border-2 border-primary"
           />
           <div>
-            <h2 className="text-xl font-bold">{mockCreator.displayName}</h2>
-            <p className="text-muted-foreground text-sm mt-1">{mockCreator.bio}</p>
+            <h2 className="text-xl font-bold">{profile.displayName}</h2>
+            <p className="text-muted-foreground text-sm mt-1">{profile.bio}</p>
           </div>
         </div>
       </div>
@@ -87,6 +89,14 @@ const Profile = () => {
           <NotificationsList />
         )}
       </div>
+
+      {/* Settings Sheet */}
+      <ProfileSettingsSheet
+        open={showSettings}
+        onOpenChange={setShowSettings}
+        currentProfile={profile}
+        onSave={handleProfileSave}
+      />
 
       <BottomNav />
     </div>
