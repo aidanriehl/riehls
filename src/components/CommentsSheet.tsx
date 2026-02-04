@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Heart, Send } from 'lucide-react';
+import { Heart, Send } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -72,14 +72,9 @@ export function CommentsSheet({ videoId, isOpen, onClose }: CommentsSheetProps) 
         className="h-[70vh] rounded-t-3xl bg-card border-border px-0"
       >
         <SheetHeader className="px-4 pb-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-lg font-semibold">
-              {comments.length} comments
-            </SheetTitle>
-            <button onClick={onClose} className="p-2 -mr-2">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <SheetTitle className="text-lg font-semibold text-center">
+            {comments.length} comments
+          </SheetTitle>
         </SheetHeader>
 
         {/* Comments list */}
