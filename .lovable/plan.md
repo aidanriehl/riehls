@@ -1,94 +1,84 @@
 
-
-# UI Fixes and Updates
+# Enhanced Messaging Feature - Instagram-Style DMs
 
 ## Overview
-This plan addresses four UI issues: fixing non-functional buttons, updating the bottom navigation, enhancing the header gradient, and removing the @ symbol from the username display.
+Transform the messaging interface to match Instagram's DM experience with suggestion bubbles, message reactions, swipe gestures for timestamps and replies, and updated styling.
 
----
+## Changes Summary
 
-## Issues & Fixes
+### 1. Remove Initial Message
+Start with an empty conversation instead of the default "Hey! Thanks for checking out my content" message.
 
-### 1. Share Button Not Working (Home)
+### 2. Add Suggestion Bubbles
+Add 3 clickable suggestion chips above the input area:
+- "low key you're bad" (with devil emoji)
+- "You up?"
+- "like for tbh?"
 
-**Investigation:** The Share button IS properly wired up in VideoPlayer.tsx. The `handleShare` function calls `setShowShare(true)`, and the ShareSheet component is rendered with the correct props. 
+When tapped, the suggestion text populates the message input field.
 
-**Likely cause:** The button click might be getting intercepted by the video's touch/click handlers, or there's a z-index issue.
+### 3. Message Reactions (Liking DMs)
+- Double-tap on any message to "like" it
+- Show a red heart emoji below the liked message (matching Instagram's style from your screenshot)
+- Track liked state per message
 
-**Fix:** Add `e.stopPropagation()` to prevent the click from bubbling to the video element, and ensure proper z-index layering.
+### 4. Sent Message Color Update
+Change sent messages from the current blue (`bg-primary`) to a purple/violet color matching Instagram's DM bubble color shown in your screenshot (approximately `#7C3AED` or similar violet).
 
----
+### 5. Hidden Timestamps with Swipe-to-Reveal
+- Hide timestamps by default
+- Swipe left on a message to reveal the timestamp on the right side
+- Timestamp slides in smoothly, then hides after a moment or when user swipes back
 
-### 2. Settings Button Not Working (Profile)
-
-**Current state:** The Settings button is purely decorative - no onClick handler.
-
-**Fix:** For now, I'll add a toast notification saying "Settings coming soon" so users know it's not broken. We can build out settings later.
-
----
-
-### 3. Change "Home" to "Feed" with Bowl Icon
-
-**Changes to BottomNav.tsx:**
-- Rename label from "Home" to "Feed"
-- Replace `Home` icon with `UtensilsCrossed` (fork and knife crossed - matches the food/meal theme of "riehls")
-
-This icon fits the iconography style (simple line icons) and plays on the "reels" → "riehls" → "meals" pun.
-
----
-
-### 4. Add Subtle Header Gradient
-
-**Current state:** The header in Index.tsx is just text floating on the video with a `top-gradient` already applied in VideoPlayer.tsx.
-
-**Fix:** The gradient already exists via `top-gradient` class in VideoPlayer.tsx (line 120). The issue is the header in Index.tsx sits on top of it. I'll enhance the gradient to be slightly more visible so "riehls" feels more integrated.
-
-**Approach:** Adjust the `--gradient-top` CSS variable to make it subtler but more visible behind the header area.
-
----
-
-### 5. Remove @ from "aidan"
-
-**Simple change:** In VideoCaption.tsx, change `@aidan` to just `aidan`.
-
----
-
-## File Changes
-
-| File | Changes |
-|------|---------|
-| `src/components/VideoActions.tsx` | Add `e.stopPropagation()` to share button to prevent click bubbling |
-| `src/pages/Profile.tsx` | Add toast notification to Settings button |
-| `src/components/BottomNav.tsx` | Change "Home" → "Feed", use `UtensilsCrossed` icon |
-| `src/components/VideoCaption.tsx` | Remove @ symbol from "aidan" |
-| `src/index.css` | Adjust `--gradient-top` for subtler but more visible header gradient |
+### 6. Reply-to-Message Feature
+- Swipe right on received messages (left messages) to trigger reply mode
+- Swipe left on sent messages (right messages) to trigger reply mode  
+- Show a curved reply arrow icon during swipe (as in your 5th screenshot)
+- Trigger haptic feedback using `navigator.vibrate()` when threshold is reached
+- Enter reply mode: show the message being replied to above the input field
+- Sent reply displays with a preview of the original message
 
 ---
 
 ## Technical Details
 
-### VideoActions.tsx - Share Button Fix
-```text
-Current: onClick={onShare}
-Updated: onClick={(e) => { e.stopPropagation(); onShare(); }}
+### Updated Message Interface
+```typescript
+interface Message {
+  id: string;
+  content: string;
+  isFromCreator: boolean;
+  timestamp: Date;
+  isLiked: boolean;           // New: track heart reaction
+  replyToId?: string;         // New: ID of message being replied to
+}
 ```
 
-### BottomNav.tsx - Icon Change
-```text
-Import: UtensilsCrossed from 'lucide-react'
-navItems: { icon: UtensilsCrossed, label: 'Feed', path: '/' }
+### State Management
+```typescript
+const [messages, setMessages] = useState<Message[]>([]); // Start empty
+const [newMessage, setNewMessage] = useState('');
+const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+const [revealedTimestamp, setRevealedTimestamp] = useState<string | null>(null);
 ```
 
-### VideoCaption.tsx
-```text
-Current: @aidan
-Updated: aidan
-```
+### Suggestion Bubbles Component
+Positioned above the input area, horizontally scrollable row of pill-shaped buttons.
 
-### index.css - Gradient Adjustment
-```text
-Current: --gradient-top: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%);
-Updated: --gradient-top: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
-```
-Slightly stronger opacity (0.5 → 0.6) for better text contrast while remaining subtle.
+### Swipe Gesture Handling
+Use touch event handlers (`onTouchStart`, `onTouchMove`, `onTouchEnd`) to track horizontal swipe distance:
+- **Timestamp reveal**: Swipe left > 50px threshold
+- **Reply trigger**: Swipe right > 80px threshold with haptic feedback
+
+### CSS Additions
+New CSS for:
+- Suggestion bubble styling
+- Heart reaction positioning below messages
+- Swipe animation for messages
+- Reply preview styling above input
+- Purple/violet color for sent messages
+
+### Files to Modify
+- `src/pages/Messages.tsx` - Main implementation
+- `src/index.css` - Add swipe animations and new color variable for sent messages
 
