@@ -44,7 +44,7 @@ const Profile = () => {
           <img
             src={profile.avatarUrl}
             alt={profile.displayName}
-            className="w-20 h-20 rounded-full border-2 border-primary"
+            className="w-20 h-20 rounded-full"
           />
           <div>
             <h2 className="text-xl font-bold">{profile.displayName}</h2>

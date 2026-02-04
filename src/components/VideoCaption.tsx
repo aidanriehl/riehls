@@ -21,12 +21,6 @@ export function VideoCaption({ caption, createdAt }: VideoCaptionProps) {
     <div className="max-w-[85%]">
       {/* Username row with avatar */}
       <div className="flex items-center gap-2 mb-2">
-        <button 
-          onClick={() => navigate('/creator')}
-          className="font-semibold text-sm"
-        >
-          aidan
-        </button>
         <button
           onClick={() => navigate('/creator')}
           className="flex-shrink-0"
@@ -36,6 +30,12 @@ export function VideoCaption({ caption, createdAt }: VideoCaptionProps) {
             alt={mockCreator.username}
             className="w-8 h-8 rounded-lg object-cover"
           />
+        </button>
+        <button 
+          onClick={() => navigate('/creator')}
+          className="font-semibold text-sm"
+        >
+          aidan
         </button>
       </div>
 
