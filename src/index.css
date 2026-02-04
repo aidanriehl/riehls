@@ -15,7 +15,7 @@
     --popover: 0 0% 7%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 350 89% 60%;
+    --primary: 227 100% 70%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 15%;
@@ -24,7 +24,7 @@
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 65%;
 
-    --accent: 350 89% 60%;
+    --accent: 227 100% 70%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
@@ -32,7 +32,7 @@
 
     --border: 0 0% 20%;
     --input: 0 0% 20%;
-    --ring: 350 89% 60%;
+    --ring: 227 100% 70%;
 
     --radius: 0.75rem;
 
@@ -41,17 +41,17 @@
     --gradient-top: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
     --glass: rgba(255, 255, 255, 0.1);
     --glass-border: rgba(255, 255, 255, 0.15);
-    --like-color: 350 89% 60%;
+    --like-color: 227 100% 70%;
     --save-color: 45 100% 60%;
 
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 350 89% 60%;
+    --sidebar-primary: 227 100% 70%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 350 89% 60%;
+    --sidebar-ring: 227 100% 70%;
   }
 
   .dark {
