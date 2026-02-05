@@ -25,7 +25,11 @@ const App = () => (
          <BrowserRouter>
            <Routes>
              <Route path="/auth" element={<Auth />} />
-             <Route path="/onboarding" element={<Onboarding />} />
+             <Route path="/onboarding" element={
+               <ProtectedRoute requireOnboarding={false}>
+                 <Onboarding />
+               </ProtectedRoute>
+             } />
              <Route path="/" element={
                <ProtectedRoute>
                  <Index />
