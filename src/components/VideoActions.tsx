@@ -1,7 +1,8 @@
-import { Heart, MessageCircle, Bookmark, Send } from 'lucide-react';
+import { Heart, MessageCircle, DollarSign, Send } from 'lucide-react';
 import { Video } from '@/types';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { TipCountdownDialog } from './TipCountdownDialog';
 
 interface VideoActionsProps {
   video: Video;
@@ -23,7 +24,8 @@ function formatCount(count: number): string {
 
 export function VideoActions({ video, onLike, onComment, onSave, onShare }: VideoActionsProps) {
   const [likeAnimating, setLikeAnimating] = useState(false);
-  const [saveAnimating, setSaveAnimating] = useState(false);
+  const [tipAnimating, setTipAnimating] = useState(false);
+  const [showTipDialog, setShowTipDialog] = useState(false);
 
   const handleLike = () => {
     setLikeAnimating(true);
@@ -31,14 +33,15 @@ export function VideoActions({ video, onLike, onComment, onSave, onShare }: Vide
     setTimeout(() => setLikeAnimating(false), 300);
   };
 
-  const handleSave = () => {
-    setSaveAnimating(true);
-    onSave();
-    setTimeout(() => setSaveAnimating(false), 300);
+  const handleTip = () => {
+    setTipAnimating(true);
+    setShowTipDialog(true);
+    setTimeout(() => setTipAnimating(false), 300);
   };
 
   return (
-    <div className="flex flex-col items-center gap-5">
+    <>
+      <div className="flex flex-col items-center gap-5">
       {/* Like */}
       <button
         onClick={handleLike}
@@ -71,25 +74,20 @@ export function VideoActions({ video, onLike, onComment, onSave, onShare }: Vide
         <span className="text-xs font-medium">{formatCount(video.commentCount)}</span>
       </button>
 
-      {/* Save */}
+      {/* Tip */}
       <button
-        onClick={handleSave}
+        onClick={handleTip}
         className="flex flex-col items-center gap-1 transition-transform active:scale-90"
       >
         <div
           className={cn(
             'p-2 rounded-full transition-all',
-            saveAnimating && 'like-animate'
+            tipAnimating && 'like-animate'
           )}
         >
-          <Bookmark
-            className={cn(
-              'w-7 h-7 transition-all',
-              video.isSaved ? 'fill-save text-save' : 'text-foreground'
-            )}
-          />
+          <DollarSign className="w-7 h-7 text-foreground" />
         </div>
-        <span className="text-xs font-medium">Save</span>
+        <span className="text-xs font-medium">Tip</span>
       </button>
 
       {/* Share */}
@@ -102,6 +100,12 @@ export function VideoActions({ video, onLike, onComment, onSave, onShare }: Vide
         </div>
         <span className="text-xs font-medium">Share</span>
       </button>
-    </div>
+      </div>
+
+      <TipCountdownDialog 
+        open={showTipDialog} 
+        onOpenChange={setShowTipDialog} 
+      />
+    </>
   );
 }

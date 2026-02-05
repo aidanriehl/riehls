@@ -47,12 +47,12 @@ const CreatorProfile = () => {
               <div className="text-sm text-muted-foreground">posts</div>
             </div>
             <div className="text-center">
-              <div className="font-semibold">12.4K</div>
-              <div className="text-sm text-muted-foreground">followers</div>
+              <div className="font-semibold">802</div>
+              <div className="text-sm text-muted-foreground">credit score</div>
             </div>
             <div className="text-center">
-              <div className="font-semibold">342</div>
-              <div className="text-sm text-muted-foreground">following</div>
+              <div className="font-semibold">225</div>
+              <div className="text-sm text-muted-foreground">bench</div>
             </div>
           </div>
         </div>
