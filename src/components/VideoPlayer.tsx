@@ -1,5 +1,6 @@
-import { useRef, useState, useEffect } from 'react';
+ import { useRef, useState, useEffect, useCallback } from 'react';
 import { Play, Heart } from 'lucide-react';
+ import Hls from 'hls.js';
 import { Video } from '@/types';
 import { VideoActions } from './VideoActions';
 import { VideoCaption } from './VideoCaption';
@@ -15,6 +16,7 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -23,10 +25,78 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
   const lastTapRef = useRef<number>(0);
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+   // Check if URL is an HLS stream (Cloudflare Stream)
+   const isHlsUrl = useCallback((url: string) => {
+     return url.includes('.m3u8') || url.includes('cloudflarestream.com');
+   }, []);
+ 
+   // Initialize HLS.js for Cloudflare Stream videos
   useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement) return;
 
+     const videoUrl = video.videoUrl;
+ 
+     // Check if this is a Cloudflare Stream URL (watch.cloudflarestream.com)
+     // Convert watch URL to HLS manifest URL if needed
+     let hlsUrl = videoUrl;
+     if (videoUrl.includes('watch.cloudflarestream.com')) {
+       const videoId = videoUrl.split('/').pop();
+       // Use the iframe embed player for better compatibility
+       hlsUrl = `https://customer-${videoId?.substring(0, 8) || ''}.cloudflarestream.com/${videoId}/manifest/video.m3u8`;
+     }
+ 
+     // Cleanup previous HLS instance
+     if (hlsRef.current) {
+       hlsRef.current.destroy();
+       hlsRef.current = null;
+     }
+ 
+     // For HLS streams, use HLS.js
+     if (isHlsUrl(hlsUrl) && Hls.isSupported()) {
+       const hls = new Hls({
+         enableWorker: true,
+         lowLatencyMode: true,
+       });
+       hls.loadSource(hlsUrl);
+       hls.attachMedia(videoElement);
+       hlsRef.current = hls;
+ 
+       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+         if (isActive) {
+           videoElement.play().catch(() => {});
+           setIsPlaying(true);
+         }
+       });
+ 
+       hls.on(Hls.Events.ERROR, (event, data) => {
+         console.error('HLS error:', data);
+         if (data.fatal) {
+           // Fallback to direct playback
+           videoElement.src = videoUrl;
+         }
+       });
+     } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+       // Native HLS support (Safari)
+       videoElement.src = hlsUrl;
+     } else {
+       // Regular video file
+       videoElement.src = videoUrl;
+     }
+ 
+     return () => {
+       if (hlsRef.current) {
+         hlsRef.current.destroy();
+         hlsRef.current = null;
+       }
+     };
+   }, [video.videoUrl, isHlsUrl]);
+ 
+   // Handle play/pause based on active state
+   useEffect(() => {
+     const videoElement = videoRef.current;
+     if (!videoElement) return;
+ 
     if (isActive) {
       videoElement.play().catch(() => {
         // Autoplay blocked, user needs to interact
@@ -106,7 +176,6 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
       {/* Video */}
       <video
         ref={videoRef}
-        src={video.videoUrl}
         className="absolute inset-0 w-full h-full object-cover"
         loop
         playsInline

@@ -1,4 +1,4 @@
- import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+ import { createClient } from 'npm:@supabase/supabase-js@2';
  
  const corsHeaders = {
    'Access-Control-Allow-Origin': '*',
@@ -49,59 +49,85 @@
        throw new Error('No file provided');
      }
  
-     // Get Cloudinary credentials
-     const cloudName = Deno.env.get('CLOUDINARY_CLOUD_NAME');
-     const apiKey = Deno.env.get('CLOUDINARY_API_KEY');
-     const apiSecret = Deno.env.get('CLOUDINARY_API_SECRET');
+     // Get Cloudflare credentials
+     const accountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
+     const apiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
  
-     if (!cloudName || !apiKey || !apiSecret) {
-       throw new Error('Cloudinary not configured');
+     if (!accountId || !apiToken) {
+       throw new Error('Cloudflare Stream not configured');
      }
  
-     // Generate signature for upload
-     const timestamp = Math.round(Date.now() / 1000);
-     const folder = 'riehls';
-     
-     // Create signature string
-     const signatureString = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
-     const encoder = new TextEncoder();
-     const data = encoder.encode(signatureString);
-     const hashBuffer = await crypto.subtle.digest('SHA-1', data);
-     const hashArray = Array.from(new Uint8Array(hashBuffer));
-     const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+     // Convert base64 to binary for Cloudflare
+     const base64Data = file.split(',')[1] || file;
+     const binaryString = atob(base64Data);
+     const bytes = new Uint8Array(binaryString.length);
+     for (let i = 0; i < binaryString.length; i++) {
+       bytes[i] = binaryString.charCodeAt(i);
+     }
+     const videoBlob = new Blob([bytes], { type: 'video/mp4' });
  
-     // Upload to Cloudinary
-     const formData = new FormData();
-     formData.append('file', file);
-     formData.append('api_key', apiKey);
-     formData.append('timestamp', timestamp.toString());
-     formData.append('signature', signature);
-     formData.append('folder', folder);
-     formData.append('resource_type', 'video');
- 
-     const cloudinaryResponse = await fetch(
-       `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
+     // Upload to Cloudflare Stream using TUS or direct upload
+     // First, request a direct upload URL
+     const uploadUrlResponse = await fetch(
+       `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/direct_upload`,
        {
          method: 'POST',
-         body: formData,
+         headers: {
+           'Authorization': `Bearer ${apiToken}`,
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           maxDurationSeconds: 300, // 5 minutes max
+           meta: {
+             name: filename || 'video.mp4',
+           },
+         }),
        }
      );
  
-     if (!cloudinaryResponse.ok) {
-       const errorText = await cloudinaryResponse.text();
-       console.error('Cloudinary error:', errorText);
-       throw new Error('Failed to upload to Cloudinary');
+     if (!uploadUrlResponse.ok) {
+       const errorText = await uploadUrlResponse.text();
+       console.error('Cloudflare direct upload URL error:', errorText);
+       throw new Error('Failed to get upload URL from Cloudflare');
      }
  
-     const cloudinaryData = await cloudinaryResponse.json();
-     const videoUrl = cloudinaryData.secure_url;
-     const thumbnailUrl = videoUrl.replace(/\.[^.]+$/, '.jpg');
+     const uploadUrlData = await uploadUrlResponse.json();
+     
+     if (!uploadUrlData.success) {
+       console.error('Cloudflare API error:', uploadUrlData.errors);
+       throw new Error('Cloudflare API error');
+     }
+ 
+     const uploadUrl = uploadUrlData.result.uploadURL;
+     const streamMediaId = uploadUrlData.result.uid;
+ 
+     // Upload the video file to the direct upload URL
+     const uploadFormData = new FormData();
+     uploadFormData.append('file', videoBlob, filename || 'video.mp4');
+ 
+     const uploadResponse = await fetch(uploadUrl, {
+       method: 'POST',
+       body: uploadFormData,
+     });
+ 
+     if (!uploadResponse.ok) {
+       const errorText = await uploadResponse.text();
+       console.error('Cloudflare upload error:', errorText);
+       throw new Error('Failed to upload video to Cloudflare');
+     }
+ 
+     // Cloudflare Stream URLs
+     const videoUrl = `https://customer-${accountId.substring(0, 8)}.cloudflarestream.com/${streamMediaId}/manifest/video.m3u8`;
+     const thumbnailUrl = `https://customer-${accountId.substring(0, 8)}.cloudflarestream.com/${streamMediaId}/thumbnails/thumbnail.jpg`;
+     
+     // Alternative: Use the iframe embed or watch URL
+     const watchUrl = `https://watch.cloudflarestream.com/${streamMediaId}`;
  
      // Save video to database
      const { data: video, error: insertError } = await supabase
        .from('videos')
        .insert({
-         video_url: videoUrl,
+         video_url: watchUrl,
          thumbnail_url: thumbnailUrl,
          caption: caption || null,
          creator_id: user.id,
@@ -116,7 +142,7 @@
      }
  
      return new Response(
-       JSON.stringify({ success: true, video }),
+       JSON.stringify({ success: true, video, streamMediaId }),
        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
      );
  
