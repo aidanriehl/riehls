@@ -19,32 +19,59 @@
    const [loading, setLoading] = useState(true);
  
    useEffect(() => {
-     if (!user) {
-       setProfile(null);
-       setLoading(false);
-       return;
-     }
+    let isMounted = true;
  
-     fetchProfile();
-   }, [user]);
+    const loadProfile = async () => {
+      if (!user) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
  
-   const fetchProfile = async () => {
-     if (!user) return;
-     
-     setLoading(true);
-     const { data, error } = await supabase
-       .from('profiles')
-       .select('*')
-       .eq('id', user.id)
-       .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
  
-     if (error) {
-       console.error('Error fetching profile:', error);
-     } else {
-       setProfile(data);
-     }
-     setLoading(false);
-   };
+        if (isMounted) {
+          if (error) {
+            console.error('Error fetching profile:', error);
+          }
+          setProfile(data);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Profile fetch error:', err);
+          setLoading(false);
+        }
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+    } else {
+      setProfile(data);
+    }
+  };
  
    const updateProfile = async (updates: Partial<Profile>) => {
      if (!user) return { error: new Error('Not authenticated') };
