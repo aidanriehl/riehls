@@ -1,4 +1,5 @@
- import { Navigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
  import { useAuth } from '@/hooks/useAuth';
  import { useProfile } from '@/hooks/useProfile';
  
@@ -16,8 +17,14 @@
    const { user, loading: authLoading, isAdmin } = useAuth();
    const { profile, loading: profileLoading } = useProfile();
    const location = useLocation();
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingTimeout(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
  
-   if (authLoading || profileLoading) {
+  if ((authLoading || profileLoading) && !loadingTimeout) {
      return (
        <div className="h-screen w-full flex items-center justify-center bg-background">
          <div className="animate-pulse text-muted-foreground">Loading...</div>
