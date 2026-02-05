@@ -38,10 +38,15 @@ export function useVideos() {
     return videos.filter((video) => video.isSaved);
   }, [videos]);
 
+  const getLikedVideos = useCallback(() => {
+    return videos.filter((video) => video.isLiked);
+  }, [videos]);
+
   return {
     videos,
     toggleLike,
     toggleSave,
     getSavedVideos,
+    getLikedVideos,
   };
 }
