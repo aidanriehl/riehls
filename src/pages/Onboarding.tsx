@@ -1,4 +1,4 @@
-  import { useState, useEffect, useRef } from 'react';
+ import { useState } from 'react';
  import { useNavigate } from 'react-router-dom';
  import { Camera, ArrowRight, Check } from 'lucide-react';
  import { Button } from '@/components/ui/button';
@@ -15,19 +15,10 @@
    const [displayName, setDisplayName] = useState('');
    const [bio, setBio] = useState('');
    const [loading, setLoading] = useState(false);
-   const { uploadAvatar, updateProfile } = useProfile();
+   const [isCompleting, setIsCompleting] = useState(false);
+   const { uploadAvatar, updateProfile, refetch } = useProfile();
    const { toast } = useToast();
    const navigate = useNavigate();
-  const pendingNavigate = useRef(false);
- 
-  // Navigate when profile shows onboarding complete
-  const { profile } = useProfile();
-  useEffect(() => {
-    if (pendingNavigate.current && profile?.onboarding_complete) {
-      console.log('Onboarding: Profile updated, navigating to home');
-      navigate('/', { replace: true });
-    }
-  }, [profile, navigate]);
 
    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
      const file = e.target.files?.[0];
@@ -79,6 +70,10 @@
    };
  
    const handleComplete = async () => {
+     // Prevent multiple calls
+     if (isCompleting) return;
+     setIsCompleting(true);
+     
      // Generate username from display name
      const username = displayName
        .toLowerCase()
@@ -97,15 +92,16 @@
  
      if (error) {
        console.error('Onboarding: Profile update failed:', error);
+       setIsCompleting(false);
        toast({
          title: "Failed to save profile",
          description: error.message || "Could not save your profile. Please try again.",
          variant: "destructive",
        });
      } else {
-      console.log('Onboarding: Profile update successful, waiting for state sync');
-      pendingNavigate.current = true;
-      // Navigation will happen in useEffect when profile updates
+       console.log('Onboarding: Profile update successful, navigating to home');
+       // Navigate immediately after successful update
+       navigate('/', { replace: true });
      }
    };
  
