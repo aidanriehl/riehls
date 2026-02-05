@@ -102,23 +102,46 @@
 
     console.log('Upload: Getting session...');
 
-    // Get session with timeout to prevent hanging
-    let session;
-    try {
-      const sessionPromise = supabase.auth.getSession();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session fetch timed out')), 5000)
-      );
-      const result = await Promise.race([sessionPromise, timeoutPromise]) as { data: { session: any } };
-      session = result.data.session;
-    } catch (err) {
-      console.error('Session fetch failed:', err);
-      return { error: new Error('Could not verify session. Please refresh and try again.'), url: null };
+    // Retry session fetch up to 3 times with increasing delays
+    let session = null;
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Upload: Session fetch attempt ${attempt}/${maxRetries}`);
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error(`Session fetch error (attempt ${attempt}):`, error);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+            continue;
+          }
+          return { error: new Error('Could not verify session. Please refresh and try again.'), url: null };
+        }
+        
+        if (data.session?.access_token) {
+          session = data.session;
+          console.log('Upload: Session verified successfully');
+          break;
+        }
+        
+        // No session yet, wait and retry
+        if (attempt < maxRetries) {
+          console.log('Upload: No session yet, waiting...');
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+        }
+      } catch (err) {
+        console.error(`Session fetch exception (attempt ${attempt}):`, err);
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+        }
+      }
     }
 
     if (!session?.access_token) {
-      console.error('No valid session for upload');
-      return { error: new Error('Please sign in again to upload'), url: null };
+      console.error('No valid session after retries');
+      return { error: new Error('Session not ready. Please wait a moment and try again.'), url: null };
     }
  
     console.log('Upload: Session verified, uploading to:', filePath);
