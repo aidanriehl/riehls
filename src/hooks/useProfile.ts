@@ -57,36 +57,36 @@
     };
   }, [user]);
 
-  const fetchProfile = async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error fetching profile:', error);
-    } else {
-      setProfile(data);
-    }
-  };
- 
    const updateProfile = async (updates: Partial<Profile>) => {
      if (!user) return { error: new Error('Not authenticated') };
  
     try {
+      console.log('Updating profile with:', updates);
       const { error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', user.id);
  
-      if (!error) {
-        await fetchProfile();
+      if (error) {
+        console.error('Profile update error:', error);
+        return { error };
       }
  
-      return { error };
+      // Refetch profile after successful update
+      const { data: updatedProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error refetching profile:', fetchError);
+      } else {
+        setProfile(updatedProfile);
+      }
+
+      console.log('Profile updated successfully');
+      return { error: null };
     } catch (err) {
       console.error('Update profile error:', err);
       return { error: err as Error };
@@ -137,6 +137,14 @@
      loading,
      updateProfile,
      uploadAvatar,
-     refetch: fetchProfile,
+    refetch: async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (!error && data) setProfile(data);
+    },
    };
  }
