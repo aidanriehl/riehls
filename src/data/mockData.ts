@@ -1,5 +1,20 @@
 import { Video, Comment, User, Notification } from '@/types';
 
+// Helper to generate random like count based on video age
+function getRandomLikeCount(createdAt: string): number {
+  const now = new Date();
+  const videoDate = new Date(createdAt);
+  const daysDiff = (now.getTime() - videoDate.getTime()) / (1000 * 60 * 60 * 24);
+  
+  if (daysDiff > 2) {
+    // Over 2 days old: 100-200 likes
+    return Math.floor(Math.random() * 101) + 100;
+  } else {
+    // 0-2 days old: 50-100 likes
+    return Math.floor(Math.random() * 51) + 50;
+  }
+}
+
 export const mockCreator: User = {
   id: 'creator-1',
   username: 'aidan',
@@ -15,7 +30,7 @@ export const mockVideos: Video[] = [
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=400&h=700&fit=crop',
     caption: 'Golden hour magic ✨ Nothing beats these sunset vibes #goldenhour #sunset',
-    likeCount: 1247,
+    likeCount: getRandomLikeCount('2024-01-15T18:30:00Z'),
     commentCount: 89,
     createdAt: '2024-01-15T18:30:00Z',
     isLiked: false,
@@ -26,7 +41,7 @@ export const mockVideos: Video[] = [
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1682687221038-404670f09439?w=400&h=700&fit=crop',
     caption: 'Adventure awaits 🏔️ Exploring new heights today',
-    likeCount: 2341,
+    likeCount: getRandomLikeCount('2024-01-14T14:20:00Z'),
     commentCount: 156,
     createdAt: '2024-01-14T14:20:00Z',
     isLiked: true,
@@ -37,7 +52,7 @@ export const mockVideos: Video[] = [
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1682687220063-4742bd7fd538?w=400&h=700&fit=crop',
     caption: 'Weekend mood 🎉 Living my best life',
-    likeCount: 892,
+    likeCount: getRandomLikeCount('2024-01-13T20:00:00Z'),
     commentCount: 67,
     createdAt: '2024-01-13T20:00:00Z',
     isLiked: false,
@@ -48,7 +63,7 @@ export const mockVideos: Video[] = [
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1682695794947-17061dc284dd?w=400&h=700&fit=crop',
     caption: 'Road trip chronicles 🚗 Miles of memories being made',
-    likeCount: 3456,
+    likeCount: getRandomLikeCount('2024-01-12T10:15:00Z'),
     commentCount: 234,
     createdAt: '2024-01-12T10:15:00Z',
     isLiked: false,
@@ -59,7 +74,7 @@ export const mockVideos: Video[] = [
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1682695796954-bad0d0f59ff1?w=400&h=700&fit=crop',
     caption: 'Night vibes 🌙 The city never sleeps',
-    likeCount: 1678,
+    likeCount: getRandomLikeCount('2024-01-11T23:45:00Z'),
     commentCount: 98,
     createdAt: '2024-01-11T23:45:00Z',
     isLiked: true,
