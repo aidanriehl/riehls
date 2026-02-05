@@ -50,7 +50,7 @@ export function ShareSheet({ open, onOpenChange, videoCaption }: ShareSheetProps
     },
     {
       icon: Send,
-      label: 'Via Text',
+      label: 'Send to fam gc',
       onClick: handleShareText,
     },
     {
