@@ -96,40 +96,52 @@
    const uploadAvatar = async (file: File) => {
      if (!user) return { error: new Error('Not authenticated'), url: null };
  
+    // Get session explicitly to bypass SDK internal auth issues
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session?.access_token) {
+      console.error('No valid session for upload:', sessionError);
+      return { error: new Error('Please sign in again to upload'), url: null };
+    }
+
      const fileExt = file.name.split('.').pop();
      const filePath = `${user.id}/avatar.${fileExt}`;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
  
-     console.log('Uploading avatar to:', filePath);
+    console.log('Upload: Session verified, token exists');
+    console.log('Upload: Target path:', filePath);
      console.log('File details:', { name: file.name, size: file.size, type: file.type });
  
-     // Helper to add timeout to promises
-     const withTimeout = <T>(promise: Promise<T>, ms: number, operation: string): Promise<T> => {
-       const timeout = new Promise<never>((_, reject) =>
-         setTimeout(() => reject(new Error(`${operation} timed out after ${ms / 1000}s`)), ms)
-       );
-       return Promise.race([promise, timeout]);
-     };
- 
      try {
-       // Upload with 30-second timeout
-       const uploadResult = await withTimeout(
-         supabase.storage.from('avatars').upload(filePath, file, { upsert: true }),
-         30000,
-         'Avatar upload'
+      // Use direct fetch instead of SDK (bypasses internal auth sync issues)
+      const response = await fetch(
+        `${supabaseUrl}/storage/v1/object/avatars/${filePath}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'x-upsert': 'true',
+          },
+          body: file,
+        }
        );
  
-       if (uploadResult.error) {
-         console.error('Avatar upload error:', uploadResult.error);
-         return { error: uploadResult.error, url: null };
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Upload failed:', response.status, errorData);
+        return { 
+          error: new Error(errorData.message || `Upload failed: ${response.status}`), 
+          url: null 
+        };
        }
  
-       console.log('Upload successful, getting public URL...');
+      console.log('Upload successful, getting public URL');
  
        const { data: { publicUrl } } = supabase.storage
          .from('avatars')
          .getPublicUrl(filePath);
  
-       console.log('Avatar uploaded, public URL:', publicUrl);
+      console.log('Public URL:', publicUrl);
  
        // Update profile with new avatar URL
        const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
