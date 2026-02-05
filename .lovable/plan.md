@@ -1,94 +1,66 @@
 
-# Fix Onboarding Photo Upload "Saving..." Stuck Issue
+# Fix Avatar Upload - Use Direct Fetch Instead of SDK
 
-## Problem Summary
-When you upload a profile photo during onboarding and click "Continue," the button shows "Saving..." and never completes. The upload starts but silently fails, leaving you stuck.
+## What's Wrong
 
-## Root Cause
-After investigating the database, storage bucket, and code:
+Your backend is fully connected and working! The issue is specifically with how the Supabase SDK handles storage uploads:
 
-1. **Your profile record exists** - The signup trigger correctly created your profile
-2. **Storage bucket exists and is public** - Configuration is correct
-3. **The upload starts** - Console shows "Uploading avatar to: [user-id]/avatar.png"
-4. **But no files arrive** - The storage bucket is empty
-5. **The storage policy may be rejecting uploads silently** - The RLS policy comparison could be failing
+- The `supabase.storage.upload()` method hangs before making any network request
+- This happens because the SDK waits for internal auth synchronization that sometimes doesn't complete
+- Result: 30-second timeout, then "Saving..." gets stuck
 
-The storage INSERT policy uses a path-matching function that may not be evaluating correctly, causing the upload to fail without a clear error.
+## The Fix
 
-## Solution
+Replace the SDK's storage upload with a direct HTTP request using `fetch`. This:
+- Explicitly gets the auth session first
+- Sends the file directly to the storage API with the auth token
+- Bypasses the SDK's problematic internal auth handling
 
-### 1. Fix Storage Policies (Database Change)
-Replace the current storage policies with simpler, more reliable ones that explicitly check the authenticated user can upload to their own folder:
+## Technical Changes
 
-```sql
--- Drop existing policies
-DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
-DROP POLICY IF EXISTS "Avatar images are publicly accessible" ON storage.objects;
+### File: `src/hooks/useProfile.ts`
 
--- Simpler INSERT policy using path prefix check
-CREATE POLICY "Users can upload their own avatar"
-ON storage.objects FOR INSERT TO authenticated
-WITH CHECK (
-  bucket_id = 'avatars' AND
-  (SPLIT_PART(name, '/', 1) = auth.uid()::text)
-);
+Replace the `uploadAvatar` function:
 
--- UPDATE policy
-CREATE POLICY "Users can update their own avatar"
-ON storage.objects FOR UPDATE TO authenticated
-USING (
-  bucket_id = 'avatars' AND
-  (SPLIT_PART(name, '/', 1) = auth.uid()::text)
-);
+```text
+Current (broken):
+  supabase.storage.from('avatars').upload(filePath, file, { upsert: true })
 
--- DELETE policy
-CREATE POLICY "Users can delete their own avatar"
-ON storage.objects FOR DELETE TO authenticated
-USING (
-  bucket_id = 'avatars' AND
-  (SPLIT_PART(name, '/', 1) = auth.uid()::text)
-);
-
--- Public read access
-CREATE POLICY "Avatar images are publicly accessible"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'avatars');
+New (working):
+  1. Get session with supabase.auth.getSession()
+  2. Validate we have an access token
+  3. Use fetch() to POST directly to storage endpoint
+  4. Include Authorization header with Bearer token
 ```
 
-### 2. Add Upload Timeout and Better Error Handling (Code Change)
-Update `src/hooks/useProfile.ts` to add a timeout wrapper around the storage upload:
-
-- Add a 30-second timeout to prevent infinite hanging
-- Log more detailed error information
-- Ensure errors always propagate back to the UI
-
-### 3. Improve Onboarding Error Recovery (Code Change)
-Update `src/pages/Onboarding.tsx`:
-
-- Always reset loading state after any operation (success or failure)
-- Add a retry mechanism with clearer feedback
-- Show specific error messages when storage upload fails
+The new upload flow:
+```text
+┌─────────────────────────────────────────────────────────┐
+│ 1. Get Auth Session                                     │
+│    supabase.auth.getSession() → access_token            │
+├─────────────────────────────────────────────────────────┤
+│ 2. Validate Session Exists                              │
+│    If no token → return error immediately               │
+├─────────────────────────────────────────────────────────┤
+│ 3. Direct Upload via Fetch                              │
+│    POST to: {supabase_url}/storage/v1/object/avatars/   │
+│    Headers: Authorization: Bearer {token}               │
+│             x-upsert: true                              │
+│    Body: file                                           │
+├─────────────────────────────────────────────────────────┤
+│ 4. Get Public URL & Update Profile                      │
+│    supabase.storage.getPublicUrl() (this still works)   │
+│    updateProfile({ avatar_url: publicUrl })             │
+└─────────────────────────────────────────────────────────┘
+```
 
 ## Files to Change
-1. **New migration** - Fix storage RLS policies with `SPLIT_PART` instead of `storage.foldername`
-2. **src/hooks/useProfile.ts** - Add timeout wrapper and better error handling
-3. **src/pages/Onboarding.tsx** - Ensure loading state is always cleared
 
-## Technical Details
+1. **src/hooks/useProfile.ts** - Replace SDK upload with direct fetch
 
-The `storage.foldername()` function is a built-in Supabase helper, but using PostgreSQL's `SPLIT_PART(name, '/', 1)` is more predictable:
-- `name` = `79b5f8ab-c311-4f2c-b001-f1f638fb1e6a/avatar.png`
-- `SPLIT_PART(name, '/', 1)` = `79b5f8ab-c311-4f2c-b001-f1f638fb1e6a`
-- Compare against `auth.uid()::text` for user-scoped uploads
+## Why This Will Work
 
-For the timeout, we'll wrap the Supabase storage call:
-```typescript
-const uploadWithTimeout = (promise: Promise<any>, ms: number) => {
-  const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Upload timed out')), ms)
-  );
-  return Promise.race([promise, timeout]);
-};
-```
+- Direct `fetch` doesn't depend on SDK's internal auth state
+- We explicitly verify the session exists before uploading
+- If no session, user gets an immediate error instead of hanging
+- The request either succeeds or fails quickly (no 30-second wait)
