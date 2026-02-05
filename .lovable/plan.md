@@ -1,118 +1,94 @@
 
-# Fix: Loading State Stuck on Home Page
+# Fix Onboarding Photo Upload "Saving..." Stuck Issue
 
-## Problem Identified
+## Problem Summary
+When you upload a profile photo during onboarding and click "Continue," the button shows "Saving..." and never completes. The upload starts but silently fails, leaving you stuck.
 
-The app is stuck on the "Loading..." screen because of a timing issue between authentication and profile loading:
+## Root Cause
+After investigating the database, storage bucket, and code:
 
-1. The `ProtectedRoute` waits for BOTH `authLoading` AND `profileLoading` to be false
-2. The `useProfile` hook starts with `loading: true` and depends on `user` from `useAuth`
-3. There's a brief moment where `user` changes but `profileLoading` hasn't finished yet
-4. Also, your profile has `onboarding_complete: false`, so you should be redirected to onboarding - but you're not seeing that either
+1. **Your profile record exists** - The signup trigger correctly created your profile
+2. **Storage bucket exists and is public** - Configuration is correct
+3. **The upload starts** - Console shows "Uploading avatar to: [user-id]/avatar.png"
+4. **But no files arrive** - The storage bucket is empty
+5. **The storage policy may be rejecting uploads silently** - The RLS policy comparison could be failing
 
-The core issue: when `useProfile`'s `useEffect` runs with a valid `user`, it calls `fetchProfile()` which sets `loading: true` again, but if there's any issue with the query, loading may not complete properly.
+The storage INSERT policy uses a path-matching function that may not be evaluating correctly, causing the upload to fail without a clear error.
 
 ## Solution
 
-I'll make two fixes:
+### 1. Fix Storage Policies (Database Change)
+Replace the current storage policies with simpler, more reliable ones that explicitly check the authenticated user can upload to their own folder:
 
-### Fix 1: Improve `useProfile` loading logic
-- Don't re-set `loading: true` inside `fetchProfile()` when already loading
-- Add error handling that still sets `loading: false` on failure
-- Initialize loading based on whether there's already a user
+```sql
+-- Drop existing policies
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Avatar images are publicly accessible" ON storage.objects;
 
-### Fix 2: Add timeout protection in `ProtectedRoute`
-- Add a safety timeout so loading never gets permanently stuck
-- If loading takes more than 5 seconds, proceed with what we have
+-- Simpler INSERT policy using path prefix check
+CREATE POLICY "Users can upload their own avatar"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'avatars' AND
+  (SPLIT_PART(name, '/', 1) = auth.uid()::text)
+);
 
----
+-- UPDATE policy
+CREATE POLICY "Users can update their own avatar"
+ON storage.objects FOR UPDATE TO authenticated
+USING (
+  bucket_id = 'avatars' AND
+  (SPLIT_PART(name, '/', 1) = auth.uid()::text)
+);
 
-## Technical Changes
+-- DELETE policy
+CREATE POLICY "Users can delete their own avatar"
+ON storage.objects FOR DELETE TO authenticated
+USING (
+  bucket_id = 'avatars' AND
+  (SPLIT_PART(name, '/', 1) = auth.uid()::text)
+);
 
-### File: `src/hooks/useProfile.ts`
+-- Public read access
+CREATE POLICY "Avatar images are publicly accessible"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'avatars');
+```
 
-**Current Issue:**
+### 2. Add Upload Timeout and Better Error Handling (Code Change)
+Update `src/hooks/useProfile.ts` to add a timeout wrapper around the storage upload:
+
+- Add a 30-second timeout to prevent infinite hanging
+- Log more detailed error information
+- Ensure errors always propagate back to the UI
+
+### 3. Improve Onboarding Error Recovery (Code Change)
+Update `src/pages/Onboarding.tsx`:
+
+- Always reset loading state after any operation (success or failure)
+- Add a retry mechanism with clearer feedback
+- Show specific error messages when storage upload fails
+
+## Files to Change
+1. **New migration** - Fix storage RLS policies with `SPLIT_PART` instead of `storage.foldername`
+2. **src/hooks/useProfile.ts** - Add timeout wrapper and better error handling
+3. **src/pages/Onboarding.tsx** - Ensure loading state is always cleared
+
+## Technical Details
+
+The `storage.foldername()` function is a built-in Supabase helper, but using PostgreSQL's `SPLIT_PART(name, '/', 1)` is more predictable:
+- `name` = `79b5f8ab-c311-4f2c-b001-f1f638fb1e6a/avatar.png`
+- `SPLIT_PART(name, '/', 1)` = `79b5f8ab-c311-4f2c-b001-f1f638fb1e6a`
+- Compare against `auth.uid()::text` for user-scoped uploads
+
+For the timeout, we'll wrap the Supabase storage call:
 ```typescript
-const fetchProfile = async () => {
-  if (!user) return;
-  setLoading(true);  // This can cause loading to reset unexpectedly
-  // ...
+const uploadWithTimeout = (promise: Promise<any>, ms: number) => {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Upload timed out')), ms)
+  );
+  return Promise.race([promise, timeout]);
 };
 ```
-
-**Fix:**
-```typescript
-useEffect(() => {
-  let isMounted = true;
-  
-  const loadProfile = async () => {
-    if (!user) {
-      setProfile(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (isMounted) {
-        if (error) {
-          console.error('Error fetching profile:', error);
-        }
-        setProfile(data);
-        setLoading(false);
-      }
-    } catch (err) {
-      if (isMounted) {
-        console.error('Profile fetch error:', err);
-        setLoading(false);
-      }
-    }
-  };
-
-  loadProfile();
-  
-  return () => { isMounted = false; };
-}, [user]);
-```
-
-### File: `src/components/ProtectedRoute.tsx`
-
-Add a loading timeout as a safety net:
-
-```typescript
-const [loadingTimeout, setLoadingTimeout] = useState(false);
-
-useEffect(() => {
-  const timer = setTimeout(() => setLoadingTimeout(true), 5000);
-  return () => clearTimeout(timer);
-}, []);
-
-// In render - proceed if timeout OR loading complete
-if ((authLoading || profileLoading) && !loadingTimeout) {
-  return <LoadingScreen />;
-}
-```
-
----
-
-## After the Fix
-
-Once implemented:
-- The loading screen will properly transition
-- Since your `onboarding_complete` is `false`, you'll be redirected to `/onboarding`
-- Complete the onboarding steps to set up your profile
-- Then you'll be able to access the main feed
-
----
-
-## Summary of Changes
-
-| File | Change |
-|------|--------|
-| `src/hooks/useProfile.ts` | Fix loading state management, add cleanup |
-| `src/components/ProtectedRoute.tsx` | Add timeout safety for loading states |
