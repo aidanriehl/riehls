@@ -190,11 +190,11 @@
                  onChange={(e) => setBio(e.target.value)}
                  placeholder="A few words about you..."
                  className="resize-none bg-secondary"
-                 rows={4}
-                 maxLength={160}
+                rows={2}
+                maxLength={80}
                />
                <p className="text-xs text-muted-foreground text-right mt-1">
-                 {bio.length}/160
+                {bio.length}/80
                </p>
              </div>
              
