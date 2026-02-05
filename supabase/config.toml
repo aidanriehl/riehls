@@ -1,1 +1,4 @@
 project_id = "cnwyifjnhbnfbvapvute"
+ 
+ [functions.upload-video]
+ verify_jwt = false
