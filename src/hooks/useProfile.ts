@@ -76,40 +76,60 @@
    const updateProfile = async (updates: Partial<Profile>) => {
      if (!user) return { error: new Error('Not authenticated') };
  
-     const { error } = await supabase
-       .from('profiles')
-       .update(updates)
-       .eq('id', user.id);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
  
-     if (!error) {
-       await fetchProfile();
-     }
+      if (!error) {
+        await fetchProfile();
+      }
  
-     return { error };
+      return { error };
+    } catch (err) {
+      console.error('Update profile error:', err);
+      return { error: err as Error };
+    }
    };
  
    const uploadAvatar = async (file: File) => {
      if (!user) return { error: new Error('Not authenticated'), url: null };
  
-     const fileExt = file.name.split('.').pop();
-     const filePath = `${user.id}/avatar.${fileExt}`;
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${fileExt}`;
  
-     const { error: uploadError } = await supabase.storage
-       .from('avatars')
-       .upload(filePath, file, { upsert: true });
+      console.log('Uploading avatar to:', filePath);
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
  
-     if (uploadError) {
-       return { error: uploadError, url: null };
-     }
+      if (uploadError) {
+        console.error('Avatar upload error:', uploadError);
+        return { error: uploadError, url: null };
+      }
  
-     const { data: { publicUrl } } = supabase.storage
-       .from('avatars')
-       .getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
  
-     // Update profile with new avatar URL
-     await updateProfile({ avatar_url: publicUrl });
+      console.log('Avatar uploaded, public URL:', publicUrl);
  
-     return { error: null, url: publicUrl };
+      // Update profile with new avatar URL
+      const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
+      
+      if (updateError) {
+        console.error('Failed to update profile with avatar URL:', updateError);
+        // Return success anyway since the file was uploaded
+      }
+
+      return { error: null, url: publicUrl };
+    } catch (err) {
+      console.error('Avatar upload exception:', err);
+      return { error: err as Error, url: null };
+    }
    };
  
    return {
