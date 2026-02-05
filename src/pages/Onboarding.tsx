@@ -32,35 +32,38 @@
    };
  
    const handleNext = async () => {
-    setLoading(true);
-    
-    try {
-      if (step === 1 && avatarFile) {
-        const { error } = await uploadAvatar(avatarFile);
-        if (error) {
-          toast({
-            title: "Upload failed",
-            description: error.message,
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-      }
-      
-      if (step < 3) {
-        setStep(step + 1);
-         setLoading(false);
-      } else {
-        await handleComplete();
+     setLoading(true);
+ 
+     try {
+       if (step === 1 && avatarFile) {
+         console.log('Onboarding: Starting avatar upload...');
+         const { error } = await uploadAvatar(avatarFile);
+         console.log('Onboarding: Avatar upload result:', { error: error?.message || null });
+         if (error) {
+           toast({
+             title: "Upload failed",
+             description: error.message || "Could not upload photo. Please try again.",
+             variant: "destructive",
+           });
+           setLoading(false);
+           return;
+         }
        }
-    } catch (err) {
-      console.error('Onboarding step error:', err);
-      toast({
-        title: "Something went wrong",
-        description: "Please try again",
-        variant: "destructive",
-      });
+ 
+       if (step < 3) {
+         setStep(step + 1);
+       } else {
+         await handleComplete();
+       }
+     } catch (err) {
+       console.error('Onboarding step error:', err);
+       toast({
+         title: "Something went wrong",
+         description: err instanceof Error ? err.message : "Please try again",
+         variant: "destructive",
+       });
+     } finally {
+       // Always clear loading state
        setLoading(false);
      }
    };
@@ -73,6 +76,8 @@
        .replace(/[^a-z0-9]/g, '')
        .slice(0, 20) + Math.random().toString(36).slice(2, 6);
  
+     console.log('Onboarding: Completing profile with username:', username);
+ 
      const { error } = await updateProfile({
        display_name: displayName || null,
        bio: bio || null,
@@ -81,13 +86,15 @@
      });
  
      if (error) {
+       console.error('Onboarding: Profile update failed:', error);
        toast({
          title: "Failed to save profile",
-         description: error.message,
+         description: error.message || "Could not save your profile. Please try again.",
          variant: "destructive",
        });
-      setLoading(false);
+       // Note: loading state is cleared by finally block in handleNext
      } else {
+       console.log('Onboarding: Complete, navigating to home');
        navigate('/');
      }
    };
