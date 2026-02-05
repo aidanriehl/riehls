@@ -1,238 +1,118 @@
 
-# Implementation Plan: Backend Setup, Video Hosting, Admin Upload, and User Onboarding
+# Fix: Loading State Stuck on Home Page
 
-## Overview
+## Problem Identified
 
-This plan covers setting up the complete backend infrastructure for your app, including:
-- Database and authentication (Supabase)
-- Video hosting (Cloudinary - simplest for MVP)
-- Admin video upload interface
-- User signup and onboarding flow
+The app is stuck on the "Loading..." screen because of a timing issue between authentication and profile loading:
 
----
+1. The `ProtectedRoute` waits for BOTH `authLoading` AND `profileLoading` to be false
+2. The `useProfile` hook starts with `loading: true` and depends on `user` from `useAuth`
+3. There's a brief moment where `user` changes but `profileLoading` hasn't finished yet
+4. Also, your profile has `onboarding_complete: false`, so you should be redirected to onboarding - but you're not seeing that either
 
-## Part 1: Backend Infrastructure Setup
+The core issue: when `useProfile`'s `useEffect` runs with a valid `user`, it calls `fetchProfile()` which sets `loading: true` again, but if there's any issue with the query, loading may not complete properly.
 
-### Supabase Integration (Lovable Cloud)
-I'll set up Lovable Cloud which spins up a managed Supabase backend automatically - no external accounts needed.
+## Solution
 
-**What gets created:**
-- User authentication (signup/login)
-- Database tables for profiles, videos, comments, notifications
-- Storage bucket for profile photos
-- Row-level security policies for data protection
+I'll make two fixes:
 
-### Video Hosting: Cloudinary (Recommended for MVP)
+### Fix 1: Improve `useProfile` loading logic
+- Don't re-set `loading: true` inside `fetchProfile()` when already loading
+- Add error handling that still sets `loading: false` on failure
+- Initialize loading based on whether there's already a user
 
-**Why Cloudinary:**
-- Simplest setup - just upload and get a URL
-- Free tier: 25GB storage + 25GB bandwidth/month
-- Automatic video optimization and delivery
-- No complex encoding setup needed
-
-**What you'll need to do:**
-1. Create a free Cloudinary account at cloudinary.com
-2. Provide me with your Cloud Name, API Key, and API Secret when prompted
+### Fix 2: Add timeout protection in `ProtectedRoute`
+- Add a safety timeout so loading never gets permanently stuck
+- If loading takes more than 5 seconds, proceed with what we have
 
 ---
 
-## Part 2: Database Schema
+## Technical Changes
 
-### Tables to Create
+### File: `src/hooks/useProfile.ts`
 
-```text
-profiles
-├── id (uuid, references auth.users)
-├── username (text, unique)
-├── display_name (text)
-├── avatar_url (text)
-├── bio (text)
-├── onboarding_complete (boolean)
-├── created_at (timestamp)
-└── updated_at (timestamp)
+**Current Issue:**
+```typescript
+const fetchProfile = async () => {
+  if (!user) return;
+  setLoading(true);  // This can cause loading to reset unexpectedly
+  // ...
+};
+```
 
-user_roles
-├── id (uuid)
-├── user_id (uuid, references auth.users)
-└── role (enum: admin, user)
+**Fix:**
+```typescript
+useEffect(() => {
+  let isMounted = true;
+  
+  const loadProfile = async () => {
+    if (!user) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
 
-videos
-├── id (uuid)
-├── video_url (text) - Cloudinary URL
-├── thumbnail_url (text)
-├── caption (text)
-├── creator_id (uuid, references profiles)
-├── like_count (integer)
-├── comment_count (integer)
-├── created_at (timestamp)
-└── is_published (boolean)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
 
-likes
-├── id (uuid)
-├── user_id (uuid, references profiles)
-├── video_id (uuid, references videos)
-└── created_at (timestamp)
+      if (isMounted) {
+        if (error) {
+          console.error('Error fetching profile:', error);
+        }
+        setProfile(data);
+        setLoading(false);
+      }
+    } catch (err) {
+      if (isMounted) {
+        console.error('Profile fetch error:', err);
+        setLoading(false);
+      }
+    }
+  };
 
-comments
-├── id (uuid)
-├── video_id (uuid, references videos)
-├── user_id (uuid, references profiles)
-├── text (text)
-├── like_count (integer)
-├── created_at (timestamp)
-└── parent_id (uuid, nullable - for replies)
+  loadProfile();
+  
+  return () => { isMounted = false; };
+}, [user]);
+```
 
-notifications
-├── id (uuid)
-├── recipient_id (uuid, references profiles)
-├── actor_id (uuid, references profiles)
-├── type (enum: like, comment)
-├── video_id (uuid, references videos)
-├── message (text)
-├── is_read (boolean)
-└── created_at (timestamp)
+### File: `src/components/ProtectedRoute.tsx`
+
+Add a loading timeout as a safety net:
+
+```typescript
+const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+useEffect(() => {
+  const timer = setTimeout(() => setLoadingTimeout(true), 5000);
+  return () => clearTimeout(timer);
+}, []);
+
+// In render - proceed if timeout OR loading complete
+if ((authLoading || profileLoading) && !loadingTimeout) {
+  return <LoadingScreen />;
+}
 ```
 
 ---
 
-## Part 3: Authentication and Onboarding Flow
+## After the Fix
 
-### User Journey
-
-```text
-1. Landing → Signup/Login Screen
-   ↓
-2. New users → Onboarding Flow
-   ├── Step 1: Upload profile photo
-   ├── Step 2: Enter display name
-   └── Step 3: Write short bio
-   ↓
-3. Complete → Main Feed
-```
-
-### Pages and Components to Create
-
-**New Pages:**
-- `/auth` - Login/Signup page with email authentication
-- `/onboarding` - Multi-step onboarding wizard
-
-**Onboarding Flow Design:**
-- Full-screen, mobile-first design
-- Progress indicator (3 steps)
-- Step 1: Large circular photo upload area with camera icon
-- Step 2: Clean input for display name
-- Step 3: Textarea for bio with character count
-- "Continue" button at bottom of each step
-- Skip option for bio (optional field)
+Once implemented:
+- The loading screen will properly transition
+- Since your `onboarding_complete` is `false`, you'll be redirected to `/onboarding`
+- Complete the onboarding steps to set up your profile
+- Then you'll be able to access the main feed
 
 ---
 
-## Part 4: Admin Video Upload
+## Summary of Changes
 
-### Admin Detection
-- Your account gets the `admin` role in the `user_roles` table
-- Only admin users see the upload interface
-
-### Upload Interface Location
-- Hidden route at `/admin/upload` (only accessible if admin)
-- OR floating "+" button on your feed view (only visible to you)
-
-### Upload Flow
-
-```text
-Admin taps upload → Select video file
-   ↓
-Video uploads to Cloudinary via edge function
-   ↓
-Add caption in text field
-   ↓
-Preview thumbnail (auto-generated)
-   ↓
-Publish → Video appears in feed
-```
-
-### Edge Function for Cloudinary Upload
-A server-side function handles the actual Cloudinary upload to keep your API credentials secure.
-
----
-
-## Part 5: Profile Integration
-
-### Where Profile Data Appears
-
-**Comments:**
-- User's avatar from `profiles.avatar_url`
-- Username from `profiles.username`
-
-**Activity/Notifications:**
-- Actor's avatar and username from profiles table
-
-**Feed Captions:**
-- Currently hardcoded to "aidan" - stays as creator attribution
-- Comments show the commenter's real profile
-
----
-
-## Technical Details
-
-### File Structure Changes
-
-```text
-src/
-├── lib/
-│   └── supabase.ts              (Supabase client)
-├── hooks/
-│   ├── useAuth.ts               (Authentication hook)
-│   ├── useProfile.ts            (Profile management)
-│   └── useVideos.ts             (Updated for real data)
-├── pages/
-│   ├── Auth.tsx                 (Login/Signup)
-│   ├── Onboarding.tsx           (Profile setup wizard)
-│   └── AdminUpload.tsx          (Video upload - admin only)
-├── components/
-│   ├── ProtectedRoute.tsx       (Auth guard)
-│   ├── OnboardingStep1.tsx      (Photo upload)
-│   ├── OnboardingStep2.tsx      (Display name)
-│   ├── OnboardingStep3.tsx      (Bio)
-│   └── VideoUploadForm.tsx      (Admin upload form)
-
-supabase/
-├── config.toml
-├── migrations/
-│   └── 001_initial_schema.sql
-└── functions/
-    └── upload-video/
-        └── index.ts             (Cloudinary upload handler)
-```
-
-### Security Measures
-- Row-level security on all tables
-- Admin role check via secure database function
-- Video upload only through authenticated edge function
-- Profile photos stored in Supabase Storage with proper policies
-
----
-
-## Implementation Order
-
-1. **Enable Lovable Cloud** - Set up backend infrastructure
-2. **Create database schema** - Tables, RLS policies, triggers
-3. **Add authentication** - Login/signup pages with protected routes
-4. **Build onboarding flow** - 3-step profile setup wizard
-5. **Set up Cloudinary** - Request API credentials, create edge function
-6. **Build admin upload** - Video upload interface for your account
-7. **Connect everything** - Replace mock data with real database queries
-
----
-
-## What You'll Need to Provide
-
-1. **Cloudinary account** - Create at cloudinary.com (free tier is fine)
-2. **Cloudinary credentials** - Cloud Name, API Key, API Secret (I'll prompt you when ready)
-3. **Your email** - To set your account as admin after first signup
-
----
-
-## Questions Before Starting
-
-None required - I have everything needed to begin. After you approve this plan, I'll start by enabling Lovable Cloud and creating the database schema.
+| File | Change |
+|------|--------|
+| `src/hooks/useProfile.ts` | Fix loading state management, add cleanup |
+| `src/components/ProtectedRoute.tsx` | Add timeout safety for loading states |
