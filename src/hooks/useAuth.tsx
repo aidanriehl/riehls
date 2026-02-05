@@ -58,6 +58,7 @@
            .eq('role', 'admin')
            .maybeSingle()
            .then(({ data }) => {
+             console.log('Auth: Admin role check result:', data);
              setIsAdmin(!!data);
              setLoading(false);
            });
