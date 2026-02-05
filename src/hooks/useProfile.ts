@@ -96,34 +96,48 @@
    const uploadAvatar = async (file: File) => {
      if (!user) return { error: new Error('Not authenticated'), url: null };
  
-    try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}/avatar.${fileExt}`;
+     const fileExt = file.name.split('.').pop();
+     const filePath = `${user.id}/avatar.${fileExt}`;
  
-      console.log('Uploading avatar to:', filePath);
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
+     console.log('Uploading avatar to:', filePath);
+     console.log('File details:', { name: file.name, size: file.size, type: file.type });
  
-      if (uploadError) {
-        console.error('Avatar upload error:', uploadError);
-        return { error: uploadError, url: null };
-      }
+     // Helper to add timeout to promises
+     const withTimeout = <T>(promise: Promise<T>, ms: number, operation: string): Promise<T> => {
+       const timeout = new Promise<never>((_, reject) =>
+         setTimeout(() => reject(new Error(`${operation} timed out after ${ms / 1000}s`)), ms)
+       );
+       return Promise.race([promise, timeout]);
+     };
  
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+     try {
+       // Upload with 30-second timeout
+       const uploadResult = await withTimeout(
+         supabase.storage.from('avatars').upload(filePath, file, { upsert: true }),
+         30000,
+         'Avatar upload'
+       );
  
-      console.log('Avatar uploaded, public URL:', publicUrl);
+       if (uploadResult.error) {
+         console.error('Avatar upload error:', uploadResult.error);
+         return { error: uploadResult.error, url: null };
+       }
  
-      // Update profile with new avatar URL
-      const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
-      
-      if (updateError) {
-        console.error('Failed to update profile with avatar URL:', updateError);
-        // Return success anyway since the file was uploaded
-      }
+       console.log('Upload successful, getting public URL...');
+ 
+       const { data: { publicUrl } } = supabase.storage
+         .from('avatars')
+         .getPublicUrl(filePath);
+ 
+       console.log('Avatar uploaded, public URL:', publicUrl);
+ 
+       // Update profile with new avatar URL
+       const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
+ 
+       if (updateError) {
+         console.error('Failed to update profile with avatar URL:', updateError);
+         // Return success anyway since the file was uploaded
+       }
 
       return { error: null, url: publicUrl };
     } catch (err) {
