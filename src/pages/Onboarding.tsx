@@ -165,6 +165,14 @@
              >
                {avatarPreview ? 'Change photo' : 'Upload photo'}
              </button>
+           
+           <button
+             type="button"
+             onClick={() => setStep(2)}
+             className="text-muted-foreground text-sm"
+           >
+             Skip for now
+           </button>
            </div>
          )}
  
