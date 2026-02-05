@@ -96,23 +96,34 @@
    const uploadAvatar = async (file: File) => {
      if (!user) return { error: new Error('Not authenticated'), url: null };
  
-    // Get session explicitly to bypass SDK internal auth issues
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session?.access_token) {
-      console.error('No valid session for upload:', sessionError);
-      return { error: new Error('Please sign in again to upload'), url: null };
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${user.id}/avatar.${fileExt}`;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+    console.log('Upload: Getting session...');
+
+    // Get session with timeout to prevent hanging
+    let session;
+    try {
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Session fetch timed out')), 5000)
+      );
+      const result = await Promise.race([sessionPromise, timeoutPromise]) as { data: { session: any } };
+      session = result.data.session;
+    } catch (err) {
+      console.error('Session fetch failed:', err);
+      return { error: new Error('Could not verify session. Please refresh and try again.'), url: null };
     }
 
-     const fileExt = file.name.split('.').pop();
-     const filePath = `${user.id}/avatar.${fileExt}`;
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!session?.access_token) {
+      console.error('No valid session for upload');
+      return { error: new Error('Please sign in again to upload'), url: null };
+    }
  
-    console.log('Upload: Session verified, token exists');
-    console.log('Upload: Target path:', filePath);
-     console.log('File details:', { name: file.name, size: file.size, type: file.type });
+    console.log('Upload: Session verified, uploading to:', filePath);
  
-     try {
+    try {
       // Use direct fetch instead of SDK (bypasses internal auth sync issues)
       const response = await fetch(
         `${supabaseUrl}/storage/v1/object/avatars/${filePath}`,
@@ -124,7 +135,7 @@
           },
           body: file,
         }
-       );
+      );
  
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -133,30 +144,30 @@
           error: new Error(errorData.message || `Upload failed: ${response.status}`), 
           url: null 
         };
-       }
+      }
  
       console.log('Upload successful, getting public URL');
  
-       const { data: { publicUrl } } = supabase.storage
-         .from('avatars')
-         .getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
  
       console.log('Public URL:', publicUrl);
  
-       // Update profile with new avatar URL
-       const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
+      // Update profile with new avatar URL
+      const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
  
-       if (updateError) {
-         console.error('Failed to update profile with avatar URL:', updateError);
-         // Return success anyway since the file was uploaded
-       }
+      if (updateError) {
+        console.error('Failed to update profile with avatar URL:', updateError);
+        // Return success anyway since the file was uploaded
+      }
 
       return { error: null, url: publicUrl };
     } catch (err) {
       console.error('Avatar upload exception:', err);
       return { error: err as Error, url: null };
     }
-   };
+  };
  
    return {
      profile,
