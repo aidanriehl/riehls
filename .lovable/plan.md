@@ -1,84 +1,238 @@
 
-# Enhanced Messaging Feature - Instagram-Style DMs
+# Implementation Plan: Backend Setup, Video Hosting, Admin Upload, and User Onboarding
 
 ## Overview
-Transform the messaging interface to match Instagram's DM experience with suggestion bubbles, message reactions, swipe gestures for timestamps and replies, and updated styling.
 
-## Changes Summary
+This plan covers setting up the complete backend infrastructure for your app, including:
+- Database and authentication (Supabase)
+- Video hosting (Cloudinary - simplest for MVP)
+- Admin video upload interface
+- User signup and onboarding flow
 
-### 1. Remove Initial Message
-Start with an empty conversation instead of the default "Hey! Thanks for checking out my content" message.
+---
 
-### 2. Add Suggestion Bubbles
-Add 3 clickable suggestion chips above the input area:
-- "low key you're bad" (with devil emoji)
-- "You up?"
-- "like for tbh?"
+## Part 1: Backend Infrastructure Setup
 
-When tapped, the suggestion text populates the message input field.
+### Supabase Integration (Lovable Cloud)
+I'll set up Lovable Cloud which spins up a managed Supabase backend automatically - no external accounts needed.
 
-### 3. Message Reactions (Liking DMs)
-- Double-tap on any message to "like" it
-- Show a red heart emoji below the liked message (matching Instagram's style from your screenshot)
-- Track liked state per message
+**What gets created:**
+- User authentication (signup/login)
+- Database tables for profiles, videos, comments, notifications
+- Storage bucket for profile photos
+- Row-level security policies for data protection
 
-### 4. Sent Message Color Update
-Change sent messages from the current blue (`bg-primary`) to a purple/violet color matching Instagram's DM bubble color shown in your screenshot (approximately `#7C3AED` or similar violet).
+### Video Hosting: Cloudinary (Recommended for MVP)
 
-### 5. Hidden Timestamps with Swipe-to-Reveal
-- Hide timestamps by default
-- Swipe left on a message to reveal the timestamp on the right side
-- Timestamp slides in smoothly, then hides after a moment or when user swipes back
+**Why Cloudinary:**
+- Simplest setup - just upload and get a URL
+- Free tier: 25GB storage + 25GB bandwidth/month
+- Automatic video optimization and delivery
+- No complex encoding setup needed
 
-### 6. Reply-to-Message Feature
-- Swipe right on received messages (left messages) to trigger reply mode
-- Swipe left on sent messages (right messages) to trigger reply mode  
-- Show a curved reply arrow icon during swipe (as in your 5th screenshot)
-- Trigger haptic feedback using `navigator.vibrate()` when threshold is reached
-- Enter reply mode: show the message being replied to above the input field
-- Sent reply displays with a preview of the original message
+**What you'll need to do:**
+1. Create a free Cloudinary account at cloudinary.com
+2. Provide me with your Cloud Name, API Key, and API Secret when prompted
+
+---
+
+## Part 2: Database Schema
+
+### Tables to Create
+
+```text
+profiles
+├── id (uuid, references auth.users)
+├── username (text, unique)
+├── display_name (text)
+├── avatar_url (text)
+├── bio (text)
+├── onboarding_complete (boolean)
+├── created_at (timestamp)
+└── updated_at (timestamp)
+
+user_roles
+├── id (uuid)
+├── user_id (uuid, references auth.users)
+└── role (enum: admin, user)
+
+videos
+├── id (uuid)
+├── video_url (text) - Cloudinary URL
+├── thumbnail_url (text)
+├── caption (text)
+├── creator_id (uuid, references profiles)
+├── like_count (integer)
+├── comment_count (integer)
+├── created_at (timestamp)
+└── is_published (boolean)
+
+likes
+├── id (uuid)
+├── user_id (uuid, references profiles)
+├── video_id (uuid, references videos)
+└── created_at (timestamp)
+
+comments
+├── id (uuid)
+├── video_id (uuid, references videos)
+├── user_id (uuid, references profiles)
+├── text (text)
+├── like_count (integer)
+├── created_at (timestamp)
+└── parent_id (uuid, nullable - for replies)
+
+notifications
+├── id (uuid)
+├── recipient_id (uuid, references profiles)
+├── actor_id (uuid, references profiles)
+├── type (enum: like, comment)
+├── video_id (uuid, references videos)
+├── message (text)
+├── is_read (boolean)
+└── created_at (timestamp)
+```
+
+---
+
+## Part 3: Authentication and Onboarding Flow
+
+### User Journey
+
+```text
+1. Landing → Signup/Login Screen
+   ↓
+2. New users → Onboarding Flow
+   ├── Step 1: Upload profile photo
+   ├── Step 2: Enter display name
+   └── Step 3: Write short bio
+   ↓
+3. Complete → Main Feed
+```
+
+### Pages and Components to Create
+
+**New Pages:**
+- `/auth` - Login/Signup page with email authentication
+- `/onboarding` - Multi-step onboarding wizard
+
+**Onboarding Flow Design:**
+- Full-screen, mobile-first design
+- Progress indicator (3 steps)
+- Step 1: Large circular photo upload area with camera icon
+- Step 2: Clean input for display name
+- Step 3: Textarea for bio with character count
+- "Continue" button at bottom of each step
+- Skip option for bio (optional field)
+
+---
+
+## Part 4: Admin Video Upload
+
+### Admin Detection
+- Your account gets the `admin` role in the `user_roles` table
+- Only admin users see the upload interface
+
+### Upload Interface Location
+- Hidden route at `/admin/upload` (only accessible if admin)
+- OR floating "+" button on your feed view (only visible to you)
+
+### Upload Flow
+
+```text
+Admin taps upload → Select video file
+   ↓
+Video uploads to Cloudinary via edge function
+   ↓
+Add caption in text field
+   ↓
+Preview thumbnail (auto-generated)
+   ↓
+Publish → Video appears in feed
+```
+
+### Edge Function for Cloudinary Upload
+A server-side function handles the actual Cloudinary upload to keep your API credentials secure.
+
+---
+
+## Part 5: Profile Integration
+
+### Where Profile Data Appears
+
+**Comments:**
+- User's avatar from `profiles.avatar_url`
+- Username from `profiles.username`
+
+**Activity/Notifications:**
+- Actor's avatar and username from profiles table
+
+**Feed Captions:**
+- Currently hardcoded to "aidan" - stays as creator attribution
+- Comments show the commenter's real profile
 
 ---
 
 ## Technical Details
 
-### Updated Message Interface
-```typescript
-interface Message {
-  id: string;
-  content: string;
-  isFromCreator: boolean;
-  timestamp: Date;
-  isLiked: boolean;           // New: track heart reaction
-  replyToId?: string;         // New: ID of message being replied to
-}
+### File Structure Changes
+
+```text
+src/
+├── lib/
+│   └── supabase.ts              (Supabase client)
+├── hooks/
+│   ├── useAuth.ts               (Authentication hook)
+│   ├── useProfile.ts            (Profile management)
+│   └── useVideos.ts             (Updated for real data)
+├── pages/
+│   ├── Auth.tsx                 (Login/Signup)
+│   ├── Onboarding.tsx           (Profile setup wizard)
+│   └── AdminUpload.tsx          (Video upload - admin only)
+├── components/
+│   ├── ProtectedRoute.tsx       (Auth guard)
+│   ├── OnboardingStep1.tsx      (Photo upload)
+│   ├── OnboardingStep2.tsx      (Display name)
+│   ├── OnboardingStep3.tsx      (Bio)
+│   └── VideoUploadForm.tsx      (Admin upload form)
+
+supabase/
+├── config.toml
+├── migrations/
+│   └── 001_initial_schema.sql
+└── functions/
+    └── upload-video/
+        └── index.ts             (Cloudinary upload handler)
 ```
 
-### State Management
-```typescript
-const [messages, setMessages] = useState<Message[]>([]); // Start empty
-const [newMessage, setNewMessage] = useState('');
-const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-const [revealedTimestamp, setRevealedTimestamp] = useState<string | null>(null);
-```
+### Security Measures
+- Row-level security on all tables
+- Admin role check via secure database function
+- Video upload only through authenticated edge function
+- Profile photos stored in Supabase Storage with proper policies
 
-### Suggestion Bubbles Component
-Positioned above the input area, horizontally scrollable row of pill-shaped buttons.
+---
 
-### Swipe Gesture Handling
-Use touch event handlers (`onTouchStart`, `onTouchMove`, `onTouchEnd`) to track horizontal swipe distance:
-- **Timestamp reveal**: Swipe left > 50px threshold
-- **Reply trigger**: Swipe right > 80px threshold with haptic feedback
+## Implementation Order
 
-### CSS Additions
-New CSS for:
-- Suggestion bubble styling
-- Heart reaction positioning below messages
-- Swipe animation for messages
-- Reply preview styling above input
-- Purple/violet color for sent messages
+1. **Enable Lovable Cloud** - Set up backend infrastructure
+2. **Create database schema** - Tables, RLS policies, triggers
+3. **Add authentication** - Login/signup pages with protected routes
+4. **Build onboarding flow** - 3-step profile setup wizard
+5. **Set up Cloudinary** - Request API credentials, create edge function
+6. **Build admin upload** - Video upload interface for your account
+7. **Connect everything** - Replace mock data with real database queries
 
-### Files to Modify
-- `src/pages/Messages.tsx` - Main implementation
-- `src/index.css` - Add swipe animations and new color variable for sent messages
+---
 
+## What You'll Need to Provide
+
+1. **Cloudinary account** - Create at cloudinary.com (free tier is fine)
+2. **Cloudinary credentials** - Cloud Name, API Key, API Secret (I'll prompt you when ready)
+3. **Your email** - To set your account as admin after first signup
+
+---
+
+## Questions Before Starting
+
+None required - I have everything needed to begin. After you approve this plan, I'll start by enabling Lovable Cloud and creating the database schema.
