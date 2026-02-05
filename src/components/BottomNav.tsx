@@ -1,12 +1,15 @@
-import { Home, User } from 'lucide-react';
+import { Home, User, Plus } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 export function BottomNav() {
   const location = useLocation();
+  const { isAdmin } = useAuth();
 
-  const navItems = [
+  const navItems: { icon: typeof Home; path: string }[] = [
     { icon: Home, path: '/' },
+    ...(isAdmin ? [{ icon: Plus, path: '/admin/upload' }] : []),
     { icon: User, path: '/profile' },
   ];
 
