@@ -32,31 +32,40 @@
    };
  
    const handleNext = async () => {
-     if (step === 1 && avatarFile) {
-       setLoading(true);
-       const { error } = await uploadAvatar(avatarFile);
-       if (error) {
-         toast({
-           title: "Upload failed",
-           description: error.message,
-           variant: "destructive",
-         });
+    setLoading(true);
+    
+    try {
+      if (step === 1 && avatarFile) {
+        const { error } = await uploadAvatar(avatarFile);
+        if (error) {
+          toast({
+            title: "Upload failed",
+            description: error.message,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
+      
+      if (step < 3) {
+        setStep(step + 1);
          setLoading(false);
-         return;
+      } else {
+        await handleComplete();
        }
+    } catch (err) {
+      console.error('Onboarding step error:', err);
+      toast({
+        title: "Something went wrong",
+        description: "Please try again",
+        variant: "destructive",
+      });
        setLoading(false);
-     }
-     
-     if (step < 3) {
-       setStep(step + 1);
-     } else {
-       await handleComplete();
      }
    };
  
    const handleComplete = async () => {
-     setLoading(true);
-     
      // Generate username from display name
      const username = displayName
        .toLowerCase()
@@ -77,11 +86,10 @@
          description: error.message,
          variant: "destructive",
        });
+      setLoading(false);
      } else {
        navigate('/');
      }
-     
-     setLoading(false);
    };
  
    const canContinue = () => {
