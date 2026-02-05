@@ -50,7 +50,7 @@ export function ShareSheet({ open, onOpenChange, videoCaption }: ShareSheetProps
     },
     {
       icon: Send,
-      label: 'Send to fam gc',
+      label: 'Send to\nfam gc',
       onClick: handleShareText,
     },
     {
@@ -77,7 +77,7 @@ export function ShareSheet({ open, onOpenChange, videoCaption }: ShareSheetProps
               <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
                 <option.icon className="w-6 h-6" />
               </div>
-              <span className="text-xs text-center">{option.label}</span>
+              <span className="text-xs text-center whitespace-pre-line">{option.label}</span>
             </button>
           ))}
         </div>
