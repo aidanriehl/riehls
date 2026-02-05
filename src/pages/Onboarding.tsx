@@ -1,4 +1,4 @@
- import { useState } from 'react';
+  import { useState, useEffect, useRef } from 'react';
  import { useNavigate } from 'react-router-dom';
  import { Camera, ArrowRight, Check } from 'lucide-react';
  import { Button } from '@/components/ui/button';
@@ -18,7 +18,17 @@
    const { uploadAvatar, updateProfile } = useProfile();
    const { toast } = useToast();
    const navigate = useNavigate();
+  const pendingNavigate = useRef(false);
  
+  // Navigate when profile shows onboarding complete
+  const { profile } = useProfile();
+  useEffect(() => {
+    if (pendingNavigate.current && profile?.onboarding_complete) {
+      console.log('Onboarding: Profile updated, navigating to home');
+      navigate('/', { replace: true });
+    }
+  }, [profile, navigate]);
+
    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
      const file = e.target.files?.[0];
      if (file) {
@@ -92,10 +102,10 @@
          description: error.message || "Could not save your profile. Please try again.",
          variant: "destructive",
        });
-       // Note: loading state is cleared by finally block in handleNext
      } else {
-       console.log('Onboarding: Complete, navigating to home');
-       navigate('/');
+      console.log('Onboarding: Profile update successful, waiting for state sync');
+      pendingNavigate.current = true;
+      // Navigation will happen in useEffect when profile updates
      }
    };
  
