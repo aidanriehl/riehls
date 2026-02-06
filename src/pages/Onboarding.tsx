@@ -41,11 +41,11 @@
          const { error } = await uploadAvatar(avatarFile);
          console.log('Onboarding: Avatar upload result:', { error: error?.message || null });
          if (error) {
-           toast({
-             title: "Upload failed",
-             description: error.message || "Could not upload photo. Please try again.",
-             variant: "destructive",
-           });
+        toast({
+          title: "Upload failed",
+          description: `${error.message || "Could not upload photo."} You can skip this step and add a photo later.`,
+          variant: "destructive",
+        });
            setLoading(false);
            return;
          }
