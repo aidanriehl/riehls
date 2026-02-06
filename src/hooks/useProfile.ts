@@ -93,89 +93,28 @@
     }
    };
  
-   const uploadAvatar = async (file: File) => {
-     if (!user) return { error: new Error('Not authenticated'), url: null };
- 
+  const uploadAvatar = async (file: File) => {
+    if (!user) return { error: new Error('Not authenticated'), url: null };
+
     const fileExt = file.name.split('.').pop();
     const filePath = `${user.id}/avatar.${fileExt}`;
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
-    console.log('Upload: Getting session...');
-
-    // Retry session fetch up to 3 times with increasing delays
-    let session = null;
-    const maxRetries = 3;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`Upload: Session fetch attempt ${attempt}/${maxRetries}`);
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error(`Session fetch error (attempt ${attempt}):`, error);
-          if (attempt < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-            continue;
-          }
-          return { error: new Error('Could not verify session. Please refresh and try again.'), url: null };
-        }
-        
-        if (data.session?.access_token) {
-          session = data.session;
-          console.log('Upload: Session verified successfully');
-          break;
-        }
-        
-        // No session yet, wait and retry
-        if (attempt < maxRetries) {
-          console.log('Upload: No session yet, waiting...');
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-        }
-      } catch (err) {
-        console.error(`Session fetch exception (attempt ${attempt}):`, err);
-        if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-        }
-      }
-    }
-
-    if (!session?.access_token) {
-      console.error('No valid session after retries');
-      return { error: new Error('Session not ready. Please wait a moment and try again.'), url: null };
-    }
- 
-    console.log('Upload: Session verified, uploading to:', filePath);
-
-    // Create abort controller for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.log('Upload: Timeout reached, aborting...');
-      controller.abort();
-    }, 15000); // 15 second timeout
+    console.log('Upload: Starting avatar upload to:', filePath);
 
     try {
-      console.log('Upload: Starting fetch with 15s timeout...');
-      
-      const response = await fetch(
-        `${supabaseUrl}/storage/v1/object/avatars/${filePath}`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'x-upsert': 'true',
-          },
-          body: file,
-          signal: controller.signal,
-        }
-      );
+      // Use Supabase SDK which handles Content-Type and auth automatically
+      const { data, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: true,
+          cacheControl: '3600',
+        });
 
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Upload failed:', response.status, errorData);
+      if (uploadError) {
+        console.error('Upload failed:', uploadError);
         return { 
-          error: new Error(errorData.message || `Upload failed: ${response.status}`), 
+          error: new Error(uploadError.message || 'Upload failed'), 
           url: null 
         };
       }
@@ -193,21 +132,10 @@
 
       if (updateError) {
         console.error('Failed to update profile with avatar URL:', updateError);
-        // Return success anyway since the file was uploaded
       }
 
       return { error: null, url: publicUrl };
     } catch (err) {
-      clearTimeout(timeoutId);
-      
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.error('Upload timed out after 15 seconds');
-        return { 
-          error: new Error('Upload timed out. Please try a smaller image or check your connection.'), 
-          url: null 
-        };
-      }
-      
       console.error('Avatar upload exception:', err);
       return { error: err as Error, url: null };
     }
