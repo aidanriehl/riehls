@@ -178,6 +178,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"
         loop
+        muted
         playsInline
         onClick={handleTap}
         onTouchStart={handleTouchStart}
