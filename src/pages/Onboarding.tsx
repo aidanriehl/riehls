@@ -8,66 +8,91 @@
  import { useToast } from '@/hooks/use-toast';
  import { cn } from '@/lib/utils';
  
- export default function Onboarding() {
-   const [step, setStep] = useState(1);
-   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-   const [displayName, setDisplayName] = useState('');
-   const [bio, setBio] = useState('');
-   const [loading, setLoading] = useState(false);
-   const [isCompleting, setIsCompleting] = useState(false);
-   const { uploadAvatar, updateProfile, refetch } = useProfile();
-   const { toast } = useToast();
-   const navigate = useNavigate();
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-     const file = e.target.files?.[0];
-     if (file) {
-       setAvatarFile(file);
-       const reader = new FileReader();
-       reader.onloadend = () => {
-         setAvatarPreview(reader.result as string);
-       };
-       reader.readAsDataURL(file);
-     }
-   };
- 
-   const handleNext = async () => {
-     setLoading(true);
- 
-     try {
-       if (step === 1 && avatarFile) {
-         console.log('Onboarding: Starting avatar upload...');
-         const { error } = await uploadAvatar(avatarFile);
-         console.log('Onboarding: Avatar upload result:', { error: error?.message || null });
-         if (error) {
+export default function Onboarding() {
+  const [step, setStep] = useState(1);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const { uploadAvatar, updateProfile, refetch } = useProfile();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (5MB max)
+      if (file.size > MAX_FILE_SIZE) {
         toast({
-          title: "Upload failed",
-          description: `${error.message || "Could not upload photo."} You can skip this step and add a photo later.`,
+          title: "File too large",
+          description: "Please choose an image under 5MB",
           variant: "destructive",
         });
-           setLoading(false);
-           return;
-         }
-       }
- 
-       if (step < 3) {
-         setStep(step + 1);
-       } else {
-         await handleComplete();
-       }
-     } catch (err) {
-       console.error('Onboarding step error:', err);
-       toast({
-         title: "Something went wrong",
-         description: err instanceof Error ? err.message : "Please try again",
-         variant: "destructive",
-       });
-     } finally {
-       // Always clear loading state
-       setLoading(false);
-     }
-   };
+        return;
+      }
+
+      setAvatarFile(file);
+      // Clear previously uploaded URL if user selects a new file
+      setUploadedAvatarUrl(null);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleNext = async () => {
+    setLoading(true);
+
+    try {
+      // Only upload if we have a file AND haven't already uploaded it
+      if (step === 1 && avatarFile && !uploadedAvatarUrl) {
+        console.log('Onboarding: Starting avatar upload...');
+        const { error, url } = await uploadAvatar(avatarFile);
+        console.log('Onboarding: Avatar upload result:', { error: error?.message || null, url });
+        
+        if (error) {
+          toast({
+            title: "Upload failed",
+            description: `${error.message || "Could not upload photo."} You can skip this step and add a photo later.`,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Save the URL to persistent state
+        if (url) {
+          setUploadedAvatarUrl(url);
+          console.log('Onboarding: Avatar URL saved to state:', url);
+        }
+
+        // Refetch profile to confirm the update succeeded
+        await refetch();
+      }
+
+      if (step < 3) {
+        setStep(step + 1);
+      } else {
+        await handleComplete();
+      }
+    } catch (err) {
+      console.error('Onboarding step error:', err);
+      toast({
+        title: "Something went wrong",
+        description: err instanceof Error ? err.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
  
    const handleComplete = async () => {
      // Prevent multiple calls
