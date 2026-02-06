@@ -20,30 +20,33 @@
    const [loading, setLoading] = useState(true);
    const [isAdmin, setIsAdmin] = useState(false);
  
-   useEffect(() => {
-     // Set up auth state listener FIRST
-     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-       async (event, session) => {
-         setSession(session);
-         setUser(session?.user ?? null);
-         
-         if (session?.user) {
-           // Check admin status
-           const { data } = await supabase
-             .from('user_roles')
-             .select('role')
-             .eq('user_id', session.user.id)
-             .eq('role', 'admin')
-             .maybeSingle();
-           
-           setIsAdmin(!!data);
-         } else {
-           setIsAdmin(false);
-         }
-         
-         setLoading(false);
-       }
-     );
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // CRITICAL: Use setTimeout to avoid Supabase SDK deadlock
+          // See: https://supabase.com/docs/guides/troubleshooting/why-is-my-supabase-api-call-not-returning
+          setTimeout(async () => {
+            const { data } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', session.user.id)
+              .eq('role', 'admin')
+              .maybeSingle();
+            
+            setIsAdmin(!!data);
+          }, 0);
+        } else {
+          setIsAdmin(false);
+        }
+        
+        setLoading(false);
+      }
+    );
  
      // THEN check for existing session
      supabase.auth.getSession().then(({ data: { session } }) => {
