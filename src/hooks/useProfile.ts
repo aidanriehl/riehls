@@ -145,9 +145,17 @@
     }
  
     console.log('Upload: Session verified, uploading to:', filePath);
- 
+
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.log('Upload: Timeout reached, aborting...');
+      controller.abort();
+    }, 15000); // 15 second timeout
+
     try {
-      // Use direct fetch instead of SDK (bypasses internal auth sync issues)
+      console.log('Upload: Starting fetch with 15s timeout...');
+      
       const response = await fetch(
         `${supabaseUrl}/storage/v1/object/avatars/${filePath}`,
         {
@@ -157,9 +165,12 @@
             'x-upsert': 'true',
           },
           body: file,
+          signal: controller.signal,
         }
       );
- 
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Upload failed:', response.status, errorData);
@@ -168,18 +179,18 @@
           url: null 
         };
       }
- 
+
       console.log('Upload successful, getting public URL');
- 
+
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
- 
+
       console.log('Public URL:', publicUrl);
- 
+
       // Update profile with new avatar URL
       const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
- 
+
       if (updateError) {
         console.error('Failed to update profile with avatar URL:', updateError);
         // Return success anyway since the file was uploaded
@@ -187,6 +198,16 @@
 
       return { error: null, url: publicUrl };
     } catch (err) {
+      clearTimeout(timeoutId);
+      
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.error('Upload timed out after 15 seconds');
+        return { 
+          error: new Error('Upload timed out. Please try a smaller image or check your connection.'), 
+          url: null 
+        };
+      }
+      
       console.error('Avatar upload exception:', err);
       return { error: err as Error, url: null };
     }
