@@ -1,130 +1,167 @@
 
-# Fix Profile Photo Upload - Missing Content-Type Header
 
-## Problem Analysis
+# Robust Profile Photo Upload for Onboarding
 
-The profile photo upload is failing silently (not timing out) because the current implementation uses a raw `fetch()` call to the Supabase storage API **without the required `Content-Type` header**.
+## Current Status
 
-### Current Code Issue (line 159-170 in useProfile.ts)
+Based on the network logs and database, **the upload is currently working**. The logs show:
+- Storage upload: `200 OK` ✓
+- Profile update: `204 No Content` ✓
+- Database shows `avatar_url` is saved ✓
 
-```typescript
-const response = await fetch(
-  `${supabaseUrl}/storage/v1/object/avatars/${filePath}`,
-  {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'x-upsert': 'true',
-      // MISSING: 'Content-Type': file.type
-    },
-    body: file,
-  }
-);
-```
-
-The storage API requires knowing the file's content type to process it correctly. Without this header, the request can fail or hang without a proper error response.
-
-## Solution
-
-Replace the raw `fetch()` approach with the **Supabase SDK's native upload method**: `supabase.storage.from('avatars').upload()`.
-
-This approach:
-- Automatically handles the Content-Type header
-- Handles authentication internally via the already-configured client
-- Removes the need for manual session fetch/retry logic
-- Provides consistent error handling
-- Is the officially recommended method per Supabase documentation
+However, the current implementation can be improved to meet your specified requirements for a more reliable, persistent flow.
 
 ---
 
-## Changes Required
+## Issues to Address
 
-### File: `src/hooks/useProfile.ts`
+| Current Behavior | Required Behavior |
+|------------------|-------------------|
+| No file size validation | Max 5MB file size |
+| Avatar URL stored in `uploadAvatar` but not tracked in onboarding state | Persistent `profileImageUrl` state in onboarding |
+| Navigation happens even if upload fails silently | Navigate ONLY after confirmed database success |
+| No visual confirmation that photo was saved | Clear feedback that photo is saved |
 
-Replace the entire `uploadAvatar` function with a simpler SDK-based implementation:
+---
+
+## Implementation Plan
+
+### File: `src/pages/Onboarding.tsx`
+
+#### 1. Add File Size Validation (5MB max)
+
+Add validation in `handleAvatarChange` to reject files larger than 5MB:
 
 ```typescript
-const uploadAvatar = async (file: File) => {
-  if (!user) return { error: new Error('Not authenticated'), url: null };
-
-  const fileExt = file.name.split('.').pop();
-  const filePath = `${user.id}/avatar.${fileExt}`;
-
-  console.log('Upload: Starting avatar upload to:', filePath);
-
-  try {
-    // Use Supabase SDK which handles Content-Type and auth automatically
-    const { data, error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file, {
-        contentType: file.type,
-        upsert: true, // Replace existing avatar
-        cacheControl: '3600',
+const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    // Validate file size (5MB max)
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_SIZE) {
+      toast({
+        title: "File too large",
+        description: "Please choose an image under 5MB",
+        variant: "destructive",
       });
-
-    if (uploadError) {
-      console.error('Upload failed:', uploadError);
-      return { 
-        error: new Error(uploadError.message || 'Upload failed'), 
-        url: null 
-      };
+      return;
     }
-
-    console.log('Upload successful, getting public URL');
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
-
-    console.log('Public URL:', publicUrl);
-
-    // Update profile with new avatar URL
-    const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
-
-    if (updateError) {
-      console.error('Failed to update profile with avatar URL:', updateError);
-      // Return success anyway since the file was uploaded
-    }
-
-    return { error: null, url: publicUrl };
-  } catch (err) {
-    console.error('Avatar upload exception:', err);
-    return { error: err as Error, url: null };
+    
+    setAvatarFile(file);
+    // ... rest of preview logic
   }
 };
 ```
 
-### Key Improvements
+#### 2. Add Persistent Image URL State
 
-| Before | After |
-|--------|-------|
-| Raw fetch() with manual headers | Supabase SDK method |
-| Missing Content-Type header | SDK sets Content-Type automatically |
-| Manual session fetch with retries | SDK uses configured auth |
-| 15-second manual timeout | SDK handles timeouts internally |
-| Complex error handling | Simpler, more reliable error handling |
+Track the uploaded URL to ensure it persists across the flow:
+
+```typescript
+const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(null);
+```
+
+#### 3. Refactor Upload Flow for Reliability
+
+Modify `handleNext` to:
+1. Upload the image
+2. **Store the returned URL in state**
+3. **Verify the profile was updated** before advancing
+4. Only advance after all steps succeed
+
+```typescript
+const handleNext = async () => {
+  setLoading(true);
+
+  try {
+    if (step === 1 && avatarFile && !uploadedAvatarUrl) {
+      console.log('Onboarding: Starting avatar upload...');
+      const { error, url } = await uploadAvatar(avatarFile);
+      
+      if (error) {
+        toast({
+          title: "Upload failed",
+          description: `${error.message} You can skip this step and add a photo later.`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // Save the URL to persistent state
+      if (url) {
+        setUploadedAvatarUrl(url);
+        console.log('Onboarding: Avatar URL saved to state:', url);
+      }
+      
+      // Refetch profile to confirm the update succeeded
+      await refetch();
+    }
+
+    // Advance to next step only after success
+    if (step < 3) {
+      setStep(step + 1);
+    } else {
+      await handleComplete();
+    }
+  } catch (err) {
+    console.error('Onboarding step error:', err);
+    toast({
+      title: "Something went wrong",
+      description: err instanceof Error ? err.message : "Please try again",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+#### 4. Skip Re-Upload if Already Done
+
+If the user has already uploaded and returns to step 1, don't upload again:
+
+```typescript
+// In handleNext, check if already uploaded:
+if (step === 1 && avatarFile && !uploadedAvatarUrl) {
+  // Do upload
+}
+// If uploadedAvatarUrl already exists, just advance
+```
 
 ---
 
-## Technical Flow After Fix
+## Flow Diagram
 
 ```text
-uploadAvatar(file)
-    |
-    v
-Check user authenticated
-    |
-    v
-supabase.storage.from('avatars').upload()
-    |-- handles auth from configured client
-    |-- sets Content-Type: file.type
-    |-- uses upsert: true to replace existing
-    |
-    v
-Success? --> Get public URL --> Update profile --> Return success
-    |
-    v
-Error? --> Return error with message --> UI shows toast
+User selects image
+       |
+       v
+Validate size < 5MB ──[too large]──> Show error, stay on step
+       |
+       v (valid)
+Save file to state + show preview
+       |
+       v
+User clicks Continue
+       |
+       v
+Upload to storage
+       |
+       v
+Success? ──[no]──> Show error, stay on step (allow retry/skip)
+       |
+       v (yes)
+Save URL to uploadedAvatarUrl state
+       |
+       v
+Update profile with avatar_url
+       |
+       v
+Refetch profile to confirm
+       |
+       v
+Advance to step 2
 ```
 
 ---
@@ -133,28 +170,16 @@ Error? --> Return error with message --> UI shows toast
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useProfile.ts` | Replace raw fetch with Supabase SDK upload method |
+| `src/pages/Onboarding.tsx` | Add file size validation, persistent URL state, and confirmation logic |
 
 ---
 
 ## Expected Results
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| Upload with valid image | Hangs silently | Uploads successfully |
-| Upload fails | No error shown | Clear error message displayed |
-| Large file | May hang | SDK handles with proper timeout |
-| Session issues | Complex retry logic | SDK manages automatically |
+| Scenario | Result |
+|----------|--------|
+| File > 5MB | Shows "File too large" error, doesn't upload |
+| Upload succeeds | URL saved to state, profile updated, advances to step 2 |
+| Upload fails | Shows error, stays on step 1, user can retry or skip |
+| User already uploaded | Skips re-upload on returning to step 1 |
 
----
-
-## Why This Fix Works
-
-The memory note mentions "Profile image uploads use direct fetch calls to bypass SDK synchronization deadlocks" - however, this workaround introduced the missing Content-Type issue. The proper fix is to use the SDK with the `upsert: true` option which:
-
-1. Properly sets all required headers including Content-Type
-2. Uses the already-authenticated client (no manual session management)
-3. Handles the request lifecycle properly
-4. Returns consistent error objects
-
-The SDK is the officially supported method and has been tested extensively. Any previous "deadlock" issues may have been related to other code paths that have since been fixed.
