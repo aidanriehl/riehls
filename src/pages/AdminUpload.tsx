@@ -33,52 +33,53 @@
      }
    };
  
-   const handleUpload = async () => {
-     if (!videoFile || !user) return;
- 
-     setUploading(true);
- 
-     try {
-       // Convert file to base64 for edge function
-       const reader = new FileReader();
-       reader.readAsDataURL(videoFile);
-       
-       reader.onload = async () => {
-         const base64 = reader.result as string;
-         
-         const response = await supabase.functions.invoke('upload-video', {
-           body: {
-             file: base64,
-             filename: videoFile.name,
-             caption,
-           },
-         });
- 
-         if (response.error) {
-           throw response.error;
-         }
- 
-         toast({
-           title: "Video uploaded!",
-           description: "Your video has been published to the feed.",
-         });
- 
-         navigate('/');
-       };
- 
-       reader.onerror = () => {
-         throw new Error('Failed to read file');
-       };
-     } catch (error) {
-       console.error('Upload error:', error);
-       toast({
-         title: "Upload failed",
-         description: error instanceof Error ? error.message : "Something went wrong",
-         variant: "destructive",
-       });
-       setUploading(false);
-     }
-   };
+  const handleUpload = async () => {
+    if (!videoFile || !user) return;
+
+    setUploading(true);
+
+    try {
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(videoFile);
+      });
+
+      const response = await supabase.functions.invoke('upload-video', {
+        body: {
+          file: base64,
+          filename: videoFile.name,
+          caption,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Upload failed');
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast({
+        title: "Video uploaded!",
+        description: "Your video has been published to the feed.",
+      });
+
+      navigate('/');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
  
    return (
      <div className="min-h-screen bg-background">
