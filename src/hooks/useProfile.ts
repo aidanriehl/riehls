@@ -51,23 +51,23 @@ export interface Profile {
    const [profile, setProfile] = useState<Profile | null>(null);
    const [loading, setLoading] = useState(true);
  
-   useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
- 
+
     const loadProfile = async () => {
       if (!user) {
         setProfile(null);
         setLoading(false);
         return;
       }
- 
+
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .maybeSingle();
- 
+
         if (isMounted) {
           if (error) {
             console.error('Error fetching profile:', error);
@@ -76,8 +76,8 @@ export interface Profile {
           setLoading(false);
         }
       } catch (err) {
+        console.error('Profile fetch error:', err);
         if (isMounted) {
-          console.error('Profile fetch error:', err);
           setLoading(false);
         }
       }
@@ -90,21 +90,20 @@ export interface Profile {
     };
   }, [user]);
 
-   const updateProfile = async (updates: Partial<Profile>) => {
-     if (!user) return { error: new Error('Not authenticated') };
- 
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!user) return { error: new Error('Not authenticated') };
+
     try {
-      console.log('Updating profile with:', updates);
       const { error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', user.id);
- 
+
       if (error) {
         console.error('Profile update error:', error);
         return { error };
       }
- 
+
       // Refetch profile after successful update
       const { data: updatedProfile, error: fetchError } = await supabase
         .from('profiles')
@@ -118,13 +117,12 @@ export interface Profile {
         setProfile(updatedProfile);
       }
 
-      console.log('Profile updated successfully');
       return { error: null };
     } catch (err) {
       console.error('Update profile error:', err);
       return { error: err as Error };
     }
-   };
+  };
  
   const uploadAvatar = async (file: File) => {
     if (!user) return { error: new Error('Not authenticated'), url: null };
