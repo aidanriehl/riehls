@@ -1,8 +1,41 @@
- import { useState, useEffect } from 'react';
- import { supabase } from '@/integrations/supabase/client';
- import { useAuth } from './useAuth';
- 
- export interface Profile {
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
+
+// Convert any image to JPEG for maximum compatibility (handles HEIC, PNG, WebP, etc.)
+const convertToJpeg = async (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const objectUrl = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl); // Clean up
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Failed to convert image to JPEG'));
+        },
+        'image/jpeg',
+        0.9 // 90% quality
+      );
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Failed to load image for conversion'));
+    };
+    
+    img.src = objectUrl;
+  });
+};
+
+export interface Profile {
    id: string;
    username: string | null;
    display_name: string | null;
@@ -96,17 +129,20 @@
   const uploadAvatar = async (file: File) => {
     if (!user) return { error: new Error('Not authenticated'), url: null };
 
-    const fileExt = file.name.split('.').pop();
-    const filePath = `${user.id}/avatar.${fileExt}`;
+    // Always use .jpg extension since we convert to JPEG
+    const filePath = `${user.id}/avatar.jpg`;
 
-    console.log('Upload: Starting avatar upload to:', filePath);
+    console.log('Upload: Starting avatar upload, converting to JPEG...');
 
     try {
-      // Use Supabase SDK which handles Content-Type and auth automatically
+      // Convert image to JPEG for maximum compatibility (handles HEIC, PNG, WebP, etc.)
+      const jpegBlob = await convertToJpeg(file);
+      console.log('Upload: Converted to JPEG, size:', jpegBlob.size);
+
       const { data, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, {
-          contentType: file.type,
+        .upload(filePath, jpegBlob, {
+          contentType: 'image/jpeg',
           upsert: true,
           cacheControl: '3600',
         });
