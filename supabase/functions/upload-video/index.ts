@@ -49,13 +49,14 @@
        throw new Error('No file provided');
      }
  
-     // Get Cloudflare credentials
-     const accountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
-     const apiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
- 
-     if (!accountId || !apiToken) {
-       throw new Error('Cloudflare Stream not configured');
-     }
+      // Get Cloudflare credentials
+      const accountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
+      const apiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
+      const customerSubdomain = Deno.env.get('CLOUDFLARE_CUSTOMER_SUBDOMAIN');
+
+      if (!accountId || !apiToken || !customerSubdomain) {
+        throw new Error('Cloudflare Stream not configured');
+      }
  
      // Convert base64 to binary for Cloudflare
      const base64Data = file.split(',')[1] || file;
@@ -116,9 +117,9 @@
        throw new Error('Failed to upload video to Cloudflare');
      }
  
-      // Cloudflare Stream URLs - use HLS manifest for direct video playback
-      const hlsUrl = `https://customer-${accountId.substring(0, 8)}.cloudflarestream.com/${streamMediaId}/manifest/video.m3u8`;
-      const thumbnailUrl = `https://customer-${accountId.substring(0, 8)}.cloudflarestream.com/${streamMediaId}/thumbnails/thumbnail.jpg`;
+      // Cloudflare Stream URLs - use the customer subdomain for correct URLs
+      const hlsUrl = `https://customer-${customerSubdomain}.cloudflarestream.com/${streamMediaId}/manifest/video.m3u8`;
+      const thumbnailUrl = `https://customer-${customerSubdomain}.cloudflarestream.com/${streamMediaId}/thumbnails/thumbnail.jpg`;
 
       // Save video to database with the HLS URL for direct playback
       const { data: video, error: insertError } = await supabase
