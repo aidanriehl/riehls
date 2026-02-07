@@ -1,6 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface VideoCaptionProps {
   caption: string | null;
@@ -11,10 +23,12 @@ interface VideoCaptionProps {
     avatarUrl: string | null;
     username: string | null;
   } | null;
+  onDelete?: () => void;
 }
 
-export function VideoCaption({ caption, createdAt, creator }: VideoCaptionProps) {
+export function VideoCaption({ caption, createdAt, creator, onDelete }: VideoCaptionProps) {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const maxLength = 80;
   const displayCaption = caption || '';
@@ -67,8 +81,36 @@ export function VideoCaption({ caption, createdAt, creator }: VideoCaptionProps)
         </p>
       )}
 
-      {/* Post date */}
-      <p className="text-xs text-muted-foreground mt-1.5">{formattedDate}</p>
+      {/* Post date + Admin delete */}
+      <div className="flex items-center gap-3 mt-1.5">
+        <p className="text-xs text-muted-foreground">{formattedDate}</p>
+        {isAdmin && onDelete && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className="text-xs text-destructive font-medium">
+                Delete
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this video?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete this video and remove it from your profile.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={onDelete}
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
     </div>
   );
 }
