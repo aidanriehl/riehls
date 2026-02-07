@@ -82,8 +82,8 @@ export function VideoCaption({ caption, createdAt, creator, onDelete }: VideoCap
       )}
 
       {/* Post date + Admin delete */}
-      <div className="flex flex-col gap-1 mt-1.5">
-        <p className="text-xs text-muted-foreground">{formattedDate}</p>
+      <div className="flex items-center gap-4 mt-1.5">
+        <p className="text-xs text-muted-foreground whitespace-nowrap">{formattedDate}</p>
         {isAdmin && onDelete && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
