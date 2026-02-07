@@ -26,92 +26,57 @@ export default function Onboarding() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size (5MB max)
       if (file.size > MAX_FILE_SIZE) {
-        toast({
-          title: "File too large",
-          description: "Please choose an image under 5MB",
-          variant: "destructive",
-        });
+        toast({ title: "File too large", description: "Please choose an image under 5MB", variant: "destructive" });
         return;
       }
-
       setAvatarFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
+      reader.onloadend = () => setAvatarPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleNext = async () => {
-    setLoading(true);
-
-    try {
-      if (step === 1 && avatarFile) {
-        const accessToken = session?.access_token;
-        const { error } = await uploadAvatar(avatarFile, accessToken);
-        
+  const handleContinue = async () => {
+    if (step === 1) {
+      if (avatarFile) {
+        setLoading(true);
+        try {
+          const { error } = await uploadAvatar(avatarFile, session?.access_token);
+          if (error) {
+            toast({ title: "Upload failed", description: "You can add a photo later in settings.", variant: "destructive" });
+          }
+        } catch (err) {
+          toast({ title: "Upload failed", description: "You can add a photo later in settings.", variant: "destructive" });
+        } finally {
+          setLoading(false);
+        }
+      }
+      setStep(2);
+    } else if (step === 2) {
+      if (displayName.trim().length > 0) setStep(3);
+    } else {
+      setLoading(true);
+      const username = displayName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '').slice(0, 20) + Math.random().toString(36).slice(2, 6);
+      try {
+        const { error } = await updateProfile({ display_name: displayName || null, bio: bio || null, username, onboarding_complete: true });
         if (error) {
-          toast({
-            title: "Upload failed",
-            description: `${error.message || "Could not upload photo."} You can skip this step and add a photo later.`,
-            variant: "destructive",
-          });
+          toast({ title: "Failed to save", description: "Please try again.", variant: "destructive" });
           setLoading(false);
           return;
         }
+        navigate('/', { replace: true });
+      } catch (err) {
+        toast({ title: "Failed to save", description: "Please try again.", variant: "destructive" });
+        setLoading(false);
       }
-
-      if (step < 3) {
-        setStep(step + 1);
-      } else {
-        await handleComplete();
-      }
-    } catch (err) {
-      console.error('Onboarding step error:', err);
-      toast({
-        title: "Something went wrong",
-        description: err instanceof Error ? err.message : "Please try again",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
- 
-  const handleComplete = async () => {
-    // Generate username from display name
-    const username = displayName
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[^a-z0-9]/g, '')
-      .slice(0, 20) + Math.random().toString(36).slice(2, 6);
 
-    const { error } = await updateProfile({
-      display_name: displayName || null,
-      bio: bio || null,
-      username,
-      onboarding_complete: true,
-    });
-
-    if (error) {
-      toast({
-        title: "Failed to save profile",
-        description: error.message || "Could not save your profile. Please try again.",
-        variant: "destructive",
-      });
-    } else {
-      navigate('/', { replace: true });
-    }
+  const canContinue = () => {
+    if (step === 2) return displayName.trim().length > 0;
+    return true;
   };
- 
-   const canContinue = () => {
-     if (step === 1) return true; // Avatar is optional
-     if (step === 2) return displayName.trim().length > 0;
-     return true; // Bio is optional
-   };
  
    return (
      <div className="min-h-screen flex flex-col bg-background px-6 py-12">
@@ -216,7 +181,7 @@ export default function Onboarding() {
              
              <button
                type="button"
-               onClick={handleComplete}
+               onClick={handleContinue}
                className="text-muted-foreground text-sm"
                disabled={loading}
              >
@@ -228,7 +193,7 @@ export default function Onboarding() {
  
        {/* Continue Button */}
        <Button
-         onClick={handleNext}
+         onClick={handleContinue}
          disabled={!canContinue() || loading}
          className="w-full mt-8"
          size="lg"
