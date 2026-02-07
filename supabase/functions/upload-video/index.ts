@@ -116,18 +116,15 @@
        throw new Error('Failed to upload video to Cloudflare');
      }
  
-     // Cloudflare Stream URLs
-     const videoUrl = `https://customer-${accountId.substring(0, 8)}.cloudflarestream.com/${streamMediaId}/manifest/video.m3u8`;
-     const thumbnailUrl = `https://customer-${accountId.substring(0, 8)}.cloudflarestream.com/${streamMediaId}/thumbnails/thumbnail.jpg`;
-     
-     // Alternative: Use the iframe embed or watch URL
-     const watchUrl = `https://watch.cloudflarestream.com/${streamMediaId}`;
- 
-     // Save video to database
-     const { data: video, error: insertError } = await supabase
-       .from('videos')
-       .insert({
-         video_url: watchUrl,
+      // Cloudflare Stream URLs - use HLS manifest for direct video playback
+      const hlsUrl = `https://customer-${accountId.substring(0, 8)}.cloudflarestream.com/${streamMediaId}/manifest/video.m3u8`;
+      const thumbnailUrl = `https://customer-${accountId.substring(0, 8)}.cloudflarestream.com/${streamMediaId}/thumbnails/thumbnail.jpg`;
+
+      // Save video to database with the HLS URL for direct playback
+      const { data: video, error: insertError } = await supabase
+        .from('videos')
+        .insert({
+          video_url: hlsUrl,
          thumbnail_url: thumbnailUrl,
          caption: caption || null,
          creator_id: user.id,
