@@ -1,13 +1,19 @@
 export interface Video {
   id: string;
   videoUrl: string;
-  thumbnailUrl: string;
-  caption: string;
+  thumbnailUrl: string | null;
+  caption: string | null;
   likeCount: number;
   commentCount: number;
   createdAt: string;
   isLiked: boolean;
   isSaved: boolean;
+  creator?: {
+    id: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    username: string | null;
+  } | null;
 }
 
 export interface Comment {
