@@ -143,6 +143,25 @@ export function useVideos() {
     return videos.filter((video) => video.isLiked);
   }, [videos]);
 
+  const deleteVideo = useCallback(async (videoId: string) => {
+    // Optimistic update - remove from local state
+    setVideos((prev) => prev.filter((v) => v.id !== videoId));
+
+    // Delete from database
+    const { error } = await supabase
+      .from('videos')
+      .delete()
+      .eq('id', videoId);
+
+    if (error) {
+      console.error('Error deleting video:', error);
+      // Refetch to restore state on error
+      await fetchVideos();
+      return false;
+    }
+    return true;
+  }, []);
+
   return {
     videos,
     loading,
@@ -150,6 +169,7 @@ export function useVideos() {
     toggleSave,
     getSavedVideos,
     getLikedVideos,
+    deleteVideo,
     refetch: fetchVideos,
   };
 }

@@ -12,9 +12,10 @@ interface VideoPlayerProps {
   isActive: boolean;
   onLike: () => void;
   onSave: () => void;
+  onDelete: () => void;
 }
 
-export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProps) {
+export function VideoPlayer({ video, isActive, onLike, onSave, onDelete }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -218,7 +219,12 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
 
       {/* Caption */}
       <div className="absolute left-4 bottom-24 pr-16">
-        <VideoCaption caption={video.caption} createdAt={video.createdAt} creator={video.creator} />
+        <VideoCaption 
+          caption={video.caption} 
+          createdAt={video.createdAt} 
+          creator={video.creator} 
+          onDelete={onDelete}
+        />
       </div>
 
       {/* Comments sheet */}

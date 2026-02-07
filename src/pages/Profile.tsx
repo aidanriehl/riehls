@@ -171,7 +171,8 @@ const Profile = () => {
               {myVideos.map((video) => (
                 <div 
                   key={video.id} 
-                  className="aspect-square bg-muted relative"
+                  className="aspect-square bg-muted relative cursor-pointer"
+                  onClick={() => navigate(`/?video=${video.id}`)}
                 >
                   <img 
                     src={video.thumbnailUrl || '/placeholder.svg'} 

@@ -1,12 +1,33 @@
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { VideoPlayer } from './VideoPlayer';
 import { useVideos } from '@/hooks/useVideos';
 import { Loader2 } from 'lucide-react';
 
 export function ReelsFeed() {
-  const { videos, loading, toggleLike, toggleSave } = useVideos();
+  const { videos, loading, toggleLike, toggleSave, deleteVideo } = useVideos();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const startVideoId = searchParams.get('video');
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToVideo = useRef(false);
+
+  // Scroll to specific video if ID is in URL
+  useEffect(() => {
+    if (startVideoId && videos.length > 0 && !hasScrolledToVideo.current) {
+      const videoIndex = videos.findIndex(v => v.id === startVideoId);
+      if (videoIndex !== -1) {
+        setActiveIndex(videoIndex);
+        const container = containerRef.current;
+        if (container) {
+          container.scrollTo({ top: videoIndex * container.clientHeight, behavior: 'instant' });
+        }
+        hasScrolledToVideo.current = true;
+        // Clear the URL param after scrolling
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [startVideoId, videos, setSearchParams]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -54,6 +75,7 @@ export function ReelsFeed() {
           isActive={index === activeIndex}
           onLike={() => toggleLike(video.id)}
           onSave={() => toggleSave(video.id)}
+          onDelete={() => deleteVideo(video.id)}
         />
       ))}
     </div>
