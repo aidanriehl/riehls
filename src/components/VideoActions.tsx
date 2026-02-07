@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, DollarSign, Send } from 'lucide-react';
+import { Heart, MessageCircle, DollarSign, Send, Volume2, VolumeX } from 'lucide-react';
 import { Video } from '@/types';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -10,6 +10,34 @@ interface VideoActionsProps {
   onComment: () => void;
   onSave: () => void;
   onShare: () => void;
+  onToggleMute?: () => void;
+  isMuted?: boolean;
+}
+
+// Generate a consistent boost based on video ID
+function generateBoost(videoId: string, createdAt: string): number {
+  // Simple hash from video ID for consistent "random" per video
+  let hash = 0;
+  for (let i = 0; i < videoId.length; i++) {
+    const char = videoId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  
+  const now = new Date();
+  const videoDate = new Date(createdAt);
+  const daysDiff = (now.getTime() - videoDate.getTime()) / (1000 * 60 * 60 * 24);
+  
+  // Use absolute value of hash to get positive number
+  const seed = Math.abs(hash);
+  
+  if (daysDiff < 1) {
+    // Posted today: 20-40 boost
+    return 20 + (seed % 21);
+  } else {
+    // Posted 1+ days ago: 40-60 boost
+    return 40 + (seed % 21);
+  }
 }
 
 function formatCount(count: number): string {
@@ -22,7 +50,7 @@ function formatCount(count: number): string {
   return count.toString();
 }
 
-export function VideoActions({ video, onLike, onComment, onSave, onShare }: VideoActionsProps) {
+export function VideoActions({ video, onLike, onComment, onSave, onShare, onToggleMute, isMuted }: VideoActionsProps) {
   const [likeAnimating, setLikeAnimating] = useState(false);
   const [tipAnimating, setTipAnimating] = useState(false);
   const [showTipDialog, setShowTipDialog] = useState(false);
@@ -38,6 +66,10 @@ export function VideoActions({ video, onLike, onComment, onSave, onShare }: Vide
     setShowTipDialog(true);
     setTimeout(() => setTipAnimating(false), 300);
   };
+
+  // Calculate boosted like count for display
+  const boost = generateBoost(video.id, video.createdAt);
+  const displayedLikes = video.likeCount + boost;
 
   return (
     <>
@@ -60,7 +92,7 @@ export function VideoActions({ video, onLike, onComment, onSave, onShare }: Vide
             )}
           />
         </div>
-        <span className="text-xs font-medium">{formatCount(video.likeCount)}</span>
+        <span className="text-xs font-medium">{formatCount(displayedLikes)}</span>
       </button>
 
       {/* Comment */}
@@ -100,6 +132,23 @@ export function VideoActions({ video, onLike, onComment, onSave, onShare }: Vide
         </div>
         <span className="text-xs font-medium">Share</span>
       </button>
+
+      {/* Mute toggle */}
+      {onToggleMute && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+          className="flex flex-col items-center gap-1 transition-transform active:scale-90"
+        >
+          <div className="p-2 rounded-full">
+            {isMuted ? (
+              <VolumeX className="w-7 h-7 text-foreground" />
+            ) : (
+              <Volume2 className="w-7 h-7 text-foreground" />
+            )}
+          </div>
+          <span className="text-xs font-medium">{isMuted ? 'Unmute' : 'Mute'}</span>
+        </button>
+      )}
       </div>
 
       <TipCountdownDialog 

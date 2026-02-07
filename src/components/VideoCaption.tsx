@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 
 interface VideoCaptionProps {
   caption: string | null;
@@ -25,6 +26,9 @@ export function VideoCaption({ caption, createdAt, creator }: VideoCaptionProps)
 
   const displayName = creator?.displayName || creator?.username || 'Creator';
   const avatarUrl = creator?.avatarUrl || '/placeholder.svg';
+
+  // Format date as "Jan 15"
+  const formattedDate = format(new Date(createdAt), 'MMM d');
 
   return (
     <div className="max-w-[85%]">
@@ -62,6 +66,9 @@ export function VideoCaption({ caption, createdAt, creator }: VideoCaptionProps)
           )}
         </p>
       )}
+
+      {/* Post date */}
+      <p className="text-xs text-muted-foreground mt-1.5">{formattedDate}</p>
     </div>
   );
 }
