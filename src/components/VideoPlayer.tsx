@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Play, Heart, Volume2, VolumeX } from 'lucide-react';
+import { Play, Heart } from 'lucide-react';
 import Hls from 'hls.js';
 import { Video } from '@/types';
 import { VideoActions } from './VideoActions';
@@ -12,11 +12,9 @@ interface VideoPlayerProps {
   isActive: boolean;
   onLike: () => void;
   onSave: () => void;
-  onToggleMute?: () => void;
-  isMuted?: boolean;
 }
 
-export function VideoPlayer({ video, isActive, onLike, onSave, onToggleMute, isMuted = false }: VideoPlayerProps) {
+export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -26,13 +24,6 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onToggleMute, isM
   const [isSpeedUp, setIsSpeedUp] = useState(false);
   const lastTapRef = useRef<number>(0);
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Sync muted state with video element
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.muted = isMuted;
-    }
-  }, [isMuted]);
 
    // Check if URL is an HLS stream
    const isHlsUrl = useCallback((url: string) => {
@@ -178,7 +169,6 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onToggleMute, isM
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"
         loop
-        muted={isMuted}
         playsInline
         onClick={handleTap}
         onTouchStart={handleTouchStart}
@@ -223,8 +213,6 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onToggleMute, isM
           onComment={() => setShowComments(true)}
           onSave={onSave}
           onShare={handleShare}
-          onToggleMute={onToggleMute}
-          isMuted={isMuted}
         />
       </div>
 

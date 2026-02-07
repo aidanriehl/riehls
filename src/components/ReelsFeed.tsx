@@ -6,10 +6,7 @@ import { Loader2 } from 'lucide-react';
 export function ReelsFeed() {
   const { videos, loading, toggleLike, toggleSave } = useVideos();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(false); // Default to unmuted
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const toggleMute = () => setIsMuted(!isMuted);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -57,8 +54,6 @@ export function ReelsFeed() {
           isActive={index === activeIndex}
           onLike={() => toggleLike(video.id)}
           onSave={() => toggleSave(video.id)}
-          onToggleMute={toggleMute}
-          isMuted={isMuted}
         />
       ))}
     </div>
