@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Play, Heart, Volume2, VolumeX } from 'lucide-react';
- import Hls from 'hls.js';
+import Hls from 'hls.js';
 import { Video } from '@/types';
 import { VideoActions } from './VideoActions';
 import { VideoCaption } from './VideoCaption';
@@ -12,13 +12,14 @@ interface VideoPlayerProps {
   isActive: boolean;
   onLike: () => void;
   onSave: () => void;
+  onToggleMute?: () => void;
+  isMuted?: boolean;
 }
 
-export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProps) {
+export function VideoPlayer({ video, isActive, onLike, onSave, onToggleMute, isMuted = false }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-   const hlsRef = useRef<Hls | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [doubleTapHeart, setDoubleTapHeart] = useState(false);
@@ -26,13 +27,12 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
   const lastTapRef = useRef<number>(0);
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const toggleMute = () => {
-    const videoElement = videoRef.current;
-    if (videoElement) {
-      videoElement.muted = !videoElement.muted;
-      setIsMuted(videoElement.muted);
+  // Sync muted state with video element
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = isMuted;
     }
-  };
+  }, [isMuted]);
 
    // Check if URL is an HLS stream
    const isHlsUrl = useCallback((url: string) => {
@@ -178,7 +178,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"
         loop
-        muted
+        muted={isMuted}
         playsInline
         onClick={handleTap}
         onTouchStart={handleTouchStart}
@@ -189,18 +189,6 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
       {/* Gradient overlays */}
       <div className="absolute top-0 left-0 right-0 h-32 top-gradient pointer-events-none" />
       <div className="absolute bottom-0 left-0 right-0 h-48 caption-gradient pointer-events-none" />
-
-      {/* Mute toggle button */}
-      <button
-        onClick={toggleMute}
-        className="absolute top-20 right-4 z-20 w-10 h-10 rounded-full bg-background/30 backdrop-blur-sm flex items-center justify-center"
-      >
-        {isMuted ? (
-          <VolumeX className="w-5 h-5 text-foreground" />
-        ) : (
-          <Volume2 className="w-5 h-5 text-foreground" />
-        )}
-      </button>
 
       {/* Pause indicator */}
       {!isPlaying && (
@@ -235,6 +223,8 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
           onComment={() => setShowComments(true)}
           onSave={onSave}
           onShare={handleShare}
+          onToggleMute={onToggleMute}
+          isMuted={isMuted}
         />
       </div>
 

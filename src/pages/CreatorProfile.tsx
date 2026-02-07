@@ -52,7 +52,7 @@ const CreatorProfile = () => {
             </div>
             <div className="text-center">
               <div className="font-semibold">225</div>
-              <div className="text-sm text-muted-foreground">bench</div>
+              <div className="text-sm text-muted-foreground">bench press</div>
             </div>
           </div>
         </div>

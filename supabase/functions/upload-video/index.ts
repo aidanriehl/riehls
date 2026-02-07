@@ -43,11 +43,14 @@
        throw new Error('Admin access required');
      }
  
-     // Get request body
-     const { file, filename, caption } = await req.json();
-     if (!file) {
-       throw new Error('No file provided');
-     }
+      // Get request body
+      const { file, filename, caption, thumbnailTime } = await req.json();
+      if (!file) {
+        throw new Error('No file provided');
+      }
+      
+      // Convert thumbnailTime to seconds (default to 0)
+      const thumbTime = typeof thumbnailTime === 'number' ? thumbnailTime : 0;
  
       // Get Cloudflare credentials
       const accountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
@@ -117,9 +120,10 @@
        throw new Error('Failed to upload video to Cloudflare');
      }
  
-      // Cloudflare Stream URLs - use the customer subdomain for correct URLs
-      const hlsUrl = `https://customer-${customerSubdomain}.cloudflarestream.com/${streamMediaId}/manifest/video.m3u8`;
-      const thumbnailUrl = `https://customer-${customerSubdomain}.cloudflarestream.com/${streamMediaId}/thumbnails/thumbnail.jpg`;
+       // Cloudflare Stream URLs - use the customer subdomain for correct URLs
+       const hlsUrl = `https://customer-${customerSubdomain}.cloudflarestream.com/${streamMediaId}/manifest/video.m3u8`;
+       // Use time parameter for thumbnail if provided
+       const thumbnailUrl = `https://customer-${customerSubdomain}.cloudflarestream.com/${streamMediaId}/thumbnails/thumbnail.jpg?time=${thumbTime}s`;
 
       // Save video to database with the HLS URL for direct playback
       const { data: video, error: insertError } = await supabase
