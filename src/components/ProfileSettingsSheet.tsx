@@ -40,10 +40,25 @@ export function ProfileSettingsSheet({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { uploadAvatar } = useProfile();
+  const { uploadAvatar, updateProfile } = useProfile();
   const { session, signOut } = useAuth();
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Persist to database
+    const { error } = await updateProfile({
+      display_name: displayName,
+      bio: bio,
+    });
+
+    if (error) {
+      toast({
+        title: "Update failed",
+        description: "Could not save your changes. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     onSave({ avatarUrl: avatarPreview || avatarUrl, displayName, bio });
     toast({
       title: "Profile updated",

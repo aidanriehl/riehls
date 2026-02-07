@@ -25,8 +25,9 @@ const Profile = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>(DEFAULT_TAB);
   const [showSettings, setShowSettings] = useState(false);
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const { user, isAdmin } = useAuth();
+  const { refetch: refetchVideos } = useVideos();
   const [myVideos, setMyVideos] = useState<MyVideo[]>([]);
   const [videosLoading, setVideosLoading] = useState(true);
 
@@ -61,8 +62,10 @@ const Profile = () => {
     fetchMyVideos();
   }, [user]);
 
-  const handleProfileSave = () => {
-    // Profile updates are handled by the settings sheet
+  const handleProfileSave = async () => {
+    // Refetch profile and videos to sync everywhere
+    await refetchProfile();
+    await refetchVideos();
   };
 
   const displayName = profile?.display_name || 'User';
