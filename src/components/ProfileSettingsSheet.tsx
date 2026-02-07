@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import {
   Sheet,
@@ -11,6 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 interface ProfileSettingsSheetProps {
   open: boolean;
@@ -32,10 +36,15 @@ export function ProfileSettingsSheet({
   const [displayName, setDisplayName] = useState(currentProfile.displayName);
   const [bio, setBio] = useState(currentProfile.bio);
   const [avatarUrl, setAvatarUrl] = useState(currentProfile.avatarUrl);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { uploadAvatar } = useProfile();
+  const { session } = useAuth();
 
   const handleSave = () => {
-    onSave({ avatarUrl, displayName, bio });
+    onSave({ avatarUrl: avatarPreview || avatarUrl, displayName, bio });
     toast({
       title: "Profile updated",
       description: "Your changes have been saved.",
@@ -43,12 +52,41 @@ export function ProfileSettingsSheet({
     onOpenChange(false);
   };
 
-  const handlePhotoChange = () => {
-    // For now, show a toast - later this would open a file picker
-    toast({
-      title: "Photo upload coming soon",
-      description: "This feature is being developed.",
-    });
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: "File too large", description: "Please choose an image under 5MB", variant: "destructive" });
+      return;
+    }
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onloadend = () => setAvatarPreview(reader.result as string);
+    reader.readAsDataURL(file);
+
+    // Upload to storage
+    setUploading(true);
+    try {
+      const { error, url } = await uploadAvatar(file, session?.access_token);
+      if (error) {
+        toast({ title: "Upload failed", description: "Could not upload photo. Please try again.", variant: "destructive" });
+        setAvatarPreview(null);
+      } else if (url) {
+        setAvatarUrl(url);
+        toast({ title: "Photo updated", description: "Your new photo has been saved." });
+      }
+    } catch (err) {
+      toast({ title: "Upload failed", description: "Could not upload photo. Please try again.", variant: "destructive" });
+      setAvatarPreview(null);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -60,26 +98,35 @@ export function ProfileSettingsSheet({
 
         <div className="space-y-6 py-4">
           {/* Avatar */}
-          <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-3">
             <div className="relative">
               <img
-                src={avatarUrl}
+                src={avatarPreview || avatarUrl}
                 alt="Profile"
                 className="w-24 h-24 rounded-full object-cover"
               />
               <button
-                onClick={handlePhotoChange}
+                onClick={handlePhotoClick}
+                disabled={uploading}
                 className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center border-2 border-background"
               >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
             <button
-              onClick={handlePhotoChange}
+              onClick={handlePhotoClick}
+              disabled={uploading}
               className="text-sm text-primary font-medium"
             >
-              Change photo
+              {uploading ? 'Uploading...' : 'Change photo'}
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
           </div>
 
           {/* Name */}
