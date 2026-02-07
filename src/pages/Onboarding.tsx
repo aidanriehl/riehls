@@ -199,19 +199,7 @@ export default function Onboarding() {
            className="w-4/5 max-w-xs"
            size="lg"
          >
-           {loading ? (
-             'Saving...'
-           ) : step === 3 ? (
-             <>
-               <Check className="w-5 h-5 mr-2" />
-               Complete
-             </>
-           ) : (
-             <>
-               Continue
-               <ArrowRight className="w-5 h-5 ml-2" />
-             </>
-           )}
+          {loading ? 'Saving...' : step === 3 ? 'Complete' : 'Continue'}
          </Button>
        </div>
      </div>
