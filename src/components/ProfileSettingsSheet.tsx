@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Plus, LogOut } from 'lucide-react';
 import {
   Sheet,
@@ -42,6 +42,16 @@ export function ProfileSettingsSheet({
   const { toast } = useToast();
   const { uploadAvatar, updateProfile } = useProfile();
   const { session, signOut } = useAuth();
+
+  // Sync form state when sheet opens or currentProfile changes
+  useEffect(() => {
+    if (open) {
+      setDisplayName(currentProfile.displayName);
+      setBio(currentProfile.bio);
+      setAvatarUrl(currentProfile.avatarUrl);
+      setAvatarPreview(null);
+    }
+  }, [open, currentProfile.displayName, currentProfile.bio, currentProfile.avatarUrl]);
 
   const handleSave = async () => {
     // Persist to database

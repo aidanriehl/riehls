@@ -100,6 +100,11 @@ const CreatorProfile = () => {
 
   const isLoading = loading || profileLoading;
 
+  // Use username from profile, fallback to display_name, fallback to 'aidan'
+  const headerUsername = isAdmin && adminProfile?.username 
+    ? adminProfile.username 
+    : creatorProfile?.displayName?.toLowerCase().replace(/\s+/g, '') || 'aidan';
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -115,7 +120,7 @@ const CreatorProfile = () => {
         <button onClick={() => navigate(-1)} className="p-2 -ml-2">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <span className="flex-1 text-center font-semibold">aidan</span>
+        <span className="flex-1 text-center font-semibold">{headerUsername}</span>
         <div className="w-10" /> {/* Spacer for centering */}
       </header>
 
