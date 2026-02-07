@@ -1,25 +1,25 @@
- import { useState } from 'react';
- import { useNavigate } from 'react-router-dom';
- import { Camera, ArrowRight, Check } from 'lucide-react';
- import { Button } from '@/components/ui/button';
- import { Input } from '@/components/ui/input';
- import { Textarea } from '@/components/ui/textarea';
- import { useProfile } from '@/hooks/useProfile';
- import { useToast } from '@/hooks/use-toast';
- import { cn } from '@/lib/utils';
- 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Camera, ArrowRight, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const { uploadAvatar, updateProfile, refetch } = useProfile();
+  const { uploadAvatar, updateProfile } = useProfile();
+  const { session } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -37,8 +37,6 @@ export default function Onboarding() {
       }
 
       setAvatarFile(file);
-      // Clear previously uploaded URL if user selects a new file
-      setUploadedAvatarUrl(null);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -51,11 +49,9 @@ export default function Onboarding() {
     setLoading(true);
 
     try {
-      // Only upload if we have a file AND haven't already uploaded it
-      if (step === 1 && avatarFile && !uploadedAvatarUrl) {
-        console.log('Onboarding: Starting avatar upload...');
-        const { error, url } = await uploadAvatar(avatarFile);
-        console.log('Onboarding: Avatar upload result:', { error: error?.message || null, url });
+      if (step === 1 && avatarFile) {
+        const accessToken = session?.access_token;
+        const { error } = await uploadAvatar(avatarFile, accessToken);
         
         if (error) {
           toast({
@@ -66,15 +62,6 @@ export default function Onboarding() {
           setLoading(false);
           return;
         }
-
-        // Save the URL to persistent state
-        if (url) {
-          setUploadedAvatarUrl(url);
-          console.log('Onboarding: Avatar URL saved to state:', url);
-        }
-
-        // Refetch profile to confirm the update succeeded
-        await refetch();
       }
 
       if (step < 3) {
@@ -94,41 +81,31 @@ export default function Onboarding() {
     }
   };
  
-   const handleComplete = async () => {
-     // Prevent multiple calls
-     if (isCompleting) return;
-     setIsCompleting(true);
-     
-     // Generate username from display name
-     const username = displayName
-       .toLowerCase()
-       .replace(/\s+/g, '')
-       .replace(/[^a-z0-9]/g, '')
-       .slice(0, 20) + Math.random().toString(36).slice(2, 6);
- 
-     console.log('Onboarding: Completing profile with username:', username);
- 
-     const { error } = await updateProfile({
-       display_name: displayName || null,
-       bio: bio || null,
-       username,
-       onboarding_complete: true,
-     });
- 
-     if (error) {
-       console.error('Onboarding: Profile update failed:', error);
-       setIsCompleting(false);
-       toast({
-         title: "Failed to save profile",
-         description: error.message || "Could not save your profile. Please try again.",
-         variant: "destructive",
-       });
-     } else {
-       console.log('Onboarding: Profile update successful, navigating to home');
-       // Navigate immediately after successful update
-       navigate('/', { replace: true });
-     }
-   };
+  const handleComplete = async () => {
+    // Generate username from display name
+    const username = displayName
+      .toLowerCase()
+      .replace(/\s+/g, '')
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 20) + Math.random().toString(36).slice(2, 6);
+
+    const { error } = await updateProfile({
+      display_name: displayName || null,
+      bio: bio || null,
+      username,
+      onboarding_complete: true,
+    });
+
+    if (error) {
+      toast({
+        title: "Failed to save profile",
+        description: error.message || "Could not save your profile. Please try again.",
+        variant: "destructive",
+      });
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
  
    const canContinue = () => {
      if (step === 1) return true; // Avatar is optional
