@@ -124,53 +124,41 @@ export interface Profile {
     }
   };
  
-  const uploadAvatar = async (file: File) => {
+  const uploadAvatar = async (file: File, accessToken?: string) => {
     if (!user) return { error: new Error('Not authenticated'), url: null };
+    if (!accessToken) return { error: new Error('No access token'), url: null };
 
-    // Always use .jpg extension since we convert to JPEG
     const filePath = `${user.id}/avatar.jpg`;
 
-    console.log('Upload: Starting avatar upload, converting to JPEG...');
-
     try {
-      // Convert image to JPEG for maximum compatibility (handles HEIC, PNG, WebP, etc.)
       const jpegBlob = await convertToJpeg(file);
-      console.log('Upload: Converted to JPEG, size:', jpegBlob.size);
 
-      const { data, error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, jpegBlob, {
-          contentType: 'image/jpeg',
-          upsert: true,
-          cacheControl: '3600',
-        });
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const uploadUrl = `${supabaseUrl}/storage/v1/object/avatars/${filePath}`;
 
-      if (uploadError) {
-        console.error('Upload failed:', uploadError);
-        return { 
-          error: new Error(uploadError.message || 'Upload failed'), 
-          url: null 
-        };
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'image/jpeg',
+          'x-upsert': 'true',
+        },
+        body: jpegBlob,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return { error: new Error(errorText), url: null };
       }
-
-      console.log('Upload successful, getting public URL');
 
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      console.log('Public URL:', publicUrl);
-
-      // Update profile with new avatar URL
-      const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
-
-      if (updateError) {
-        console.error('Failed to update profile with avatar URL:', updateError);
-      }
+      await updateProfile({ avatar_url: publicUrl });
 
       return { error: null, url: publicUrl };
     } catch (err) {
-      console.error('Avatar upload exception:', err);
       return { error: err as Error, url: null };
     }
   };
