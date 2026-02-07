@@ -4,25 +4,63 @@ import { ArrowLeft, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UnfollowDialog } from '@/components/UnfollowDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
 
 interface CreatorVideo {
   id: string;
   thumbnailUrl: string | null;
 }
 
-// Fetch the admin profile (the creator)
-const useCreatorProfile = () => {
-  const [profile, setProfile] = useState<{
+const CreatorProfile = () => {
+  const navigate = useNavigate();
+  const [isFollowing, setIsFollowing] = useState(true);
+  const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
+  const { profile: adminProfile, loading: profileLoading } = useProfile();
+  const { isAdmin } = useAuth();
+  const [videos, setVideos] = useState<CreatorVideo[]>([]);
+  const [creatorProfile, setCreatorProfile] = useState<{
     displayName: string;
     avatarUrl: string;
     bio: string;
   } | null>(null);
-  const [videos, setVideos] = useState<CreatorVideo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCreator = async () => {
-      // Get the admin user's profile by looking up user_roles
+    const fetchCreatorData = async () => {
+      // If current user is admin, use their profile from useProfile() hook
+      if (isAdmin && adminProfile) {
+        setCreatorProfile({
+          displayName: adminProfile.display_name || 'Aidan',
+          avatarUrl: adminProfile.avatar_url || '/placeholder.svg',
+          bio: adminProfile.bio || 'Creating moments worth sharing ✨',
+        });
+      } else {
+        // For non-admin visitors, fetch the admin's profile from DB
+        const { data: adminRole } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (adminRole?.user_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('display_name, avatar_url, bio')
+            .eq('id', adminRole.user_id)
+            .maybeSingle();
+
+          if (profileData) {
+            setCreatorProfile({
+              displayName: profileData.display_name || 'Aidan',
+              avatarUrl: profileData.avatar_url || '/placeholder.svg',
+              bio: profileData.bio || 'Creating moments worth sharing ✨',
+            });
+          }
+        }
+      }
+
+      // Fetch admin's videos
       const { data: adminRole } = await supabase
         .from('user_roles')
         .select('user_id')
@@ -30,22 +68,6 @@ const useCreatorProfile = () => {
         .maybeSingle();
 
       if (adminRole?.user_id) {
-        // Get admin's profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url, bio')
-          .eq('id', adminRole.user_id)
-          .maybeSingle();
-
-        if (profileData) {
-          setProfile({
-            displayName: profileData.display_name || 'Aidan',
-            avatarUrl: profileData.avatar_url || '/placeholder.svg',
-            bio: profileData.bio || 'Creating moments worth sharing ✨',
-          });
-        }
-
-        // Get admin's videos
         const { data: videosData } = await supabase
           .from('videos')
           .select('id, thumbnail_url')
@@ -63,17 +85,10 @@ const useCreatorProfile = () => {
       setLoading(false);
     };
 
-    fetchCreator();
-  }, []);
-
-  return { profile, videos, loading };
-};
-
-const CreatorProfile = () => {
-  const navigate = useNavigate();
-  const [isFollowing, setIsFollowing] = useState(true);
-  const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
-  const { profile, videos, loading } = useCreatorProfile();
+    if (!profileLoading) {
+      fetchCreatorData();
+    }
+  }, [isAdmin, adminProfile, profileLoading]);
 
   const handleFollowClick = () => {
     if (isFollowing) {
@@ -83,7 +98,9 @@ const CreatorProfile = () => {
     }
   };
 
-  if (loading) {
+  const isLoading = loading || profileLoading;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
@@ -107,8 +124,8 @@ const CreatorProfile = () => {
         {/* Avatar and Stats Row */}
         <div className="flex items-center gap-8">
           <img
-            src={profile?.avatarUrl || '/placeholder.svg'}
-            alt={profile?.displayName}
+            src={creatorProfile?.avatarUrl || '/placeholder.svg'}
+            alt={creatorProfile?.displayName}
             className="w-20 h-20 rounded-full object-cover"
           />
 
@@ -130,9 +147,9 @@ const CreatorProfile = () => {
 
         {/* Name and Bio */}
         <div className="mt-4">
-          <h1 className="font-semibold">{profile?.displayName}</h1>
+          <h1 className="font-semibold">{creatorProfile?.displayName}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {profile?.bio}
+            {creatorProfile?.bio}
           </p>
         </div>
 
