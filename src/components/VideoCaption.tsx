@@ -1,21 +1,30 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockCreator } from '@/data/mockData';
 
 interface VideoCaptionProps {
-  caption: string;
+  caption: string | null;
   createdAt: string;
+  creator?: {
+    id: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    username: string | null;
+  } | null;
 }
 
-export function VideoCaption({ caption, createdAt }: VideoCaptionProps) {
+export function VideoCaption({ caption, createdAt, creator }: VideoCaptionProps) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const maxLength = 80;
-  const shouldTruncate = caption.length > maxLength;
+  const displayCaption = caption || '';
+  const shouldTruncate = displayCaption.length > maxLength;
 
   const displayText = expanded || !shouldTruncate 
-    ? caption 
-    : caption.slice(0, maxLength) + '...';
+    ? displayCaption 
+    : displayCaption.slice(0, maxLength) + '...';
+
+  const displayName = creator?.displayName || creator?.username || 'Creator';
+  const avatarUrl = creator?.avatarUrl || '/placeholder.svg';
 
   return (
     <div className="max-w-[85%]">
@@ -26,8 +35,8 @@ export function VideoCaption({ caption, createdAt }: VideoCaptionProps) {
           className="flex-shrink-0"
         >
           <img
-            src={mockCreator.avatarUrl}
-            alt={mockCreator.username}
+            src={avatarUrl}
+            alt={displayName}
             className="w-8 h-8 rounded-lg object-cover"
           />
         </button>
@@ -35,22 +44,24 @@ export function VideoCaption({ caption, createdAt }: VideoCaptionProps) {
           onClick={() => navigate('/creator')}
           className="font-semibold text-sm"
         >
-          aidan
+          {displayName}
         </button>
       </div>
 
       {/* Caption */}
-      <p className="text-sm leading-relaxed">
-        {displayText}
-        {shouldTruncate && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="ml-1 text-muted-foreground font-medium"
-          >
-            {expanded ? 'less' : 'more'}
-          </button>
-        )}
-      </p>
+      {displayCaption && (
+        <p className="text-sm leading-relaxed">
+          {displayText}
+          {shouldTruncate && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="ml-1 text-muted-foreground font-medium"
+            >
+              {expanded ? 'less' : 'more'}
+            </button>
+          )}
+        </p>
+      )}
     </div>
   );
 }

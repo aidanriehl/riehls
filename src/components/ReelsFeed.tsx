@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { VideoPlayer } from './VideoPlayer';
 import { useVideos } from '@/hooks/useVideos';
+import { Loader2 } from 'lucide-react';
 
 export function ReelsFeed() {
-  const { videos, toggleLike, toggleSave } = useVideos();
+  const { videos, loading, toggleLike, toggleSave } = useVideos();
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -24,6 +25,22 @@ export function ReelsFeed() {
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
   }, [activeIndex, videos.length]);
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (videos.length === 0) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">No videos yet</p>
+      </div>
+    );
+  }
 
   return (
     <div

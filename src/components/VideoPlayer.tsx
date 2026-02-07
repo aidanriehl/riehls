@@ -228,7 +228,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
 
       {/* Caption */}
       <div className="absolute left-4 bottom-24 pr-16">
-        <VideoCaption caption={video.caption} createdAt={video.createdAt} />
+        <VideoCaption caption={video.caption} createdAt={video.createdAt} creator={video.creator} />
       </div>
 
       {/* Comments sheet */}
