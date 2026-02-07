@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, LogOut } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -41,7 +41,7 @@ export function ProfileSettingsSheet({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { uploadAvatar } = useProfile();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
 
   const handleSave = () => {
     onSave({ avatarUrl: avatarPreview || avatarUrl, displayName, bio });
@@ -87,6 +87,11 @@ export function ProfileSettingsSheet({
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    onOpenChange(false);
   };
 
   return (
@@ -158,6 +163,15 @@ export function ProfileSettingsSheet({
           <Button onClick={handleSave} className="w-full">
             Save Changes
           </Button>
+
+          {/* Logout Link */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-destructive transition-colors py-2"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="text-sm">Log out</span>
+          </button>
         </div>
       </SheetContent>
     </Sheet>

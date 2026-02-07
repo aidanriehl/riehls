@@ -79,9 +79,9 @@ export default function Onboarding() {
   };
  
    return (
-     <div className="min-h-screen flex flex-col bg-background px-6 py-12">
+     <div className="min-h-screen flex flex-col bg-background px-6 pt-8 pb-16">
        {/* Progress */}
-       <div className="flex gap-2 mb-12">
+       <div className="flex gap-2 mb-8">
          {[1, 2, 3].map((i) => (
            <div
              key={i}
@@ -96,13 +96,13 @@ export default function Onboarding() {
        <div className="flex-1 flex flex-col">
          {/* Step 1: Avatar */}
          {step === 1 && (
-           <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+           <div className="flex-1 flex flex-col items-center justify-center -mt-16 space-y-4">
              <h2 className="text-2xl font-bold text-center">Add a profile photo</h2>
              <p className="text-muted-foreground text-center">
                Help others recognize you
              </p>
              
-             <label className="relative cursor-pointer">
+             <label className="relative cursor-pointer mt-4">
                <div className={cn(
                  "w-32 h-32 rounded-full flex items-center justify-center overflow-hidden",
                  avatarPreview ? "" : "bg-secondary border-2 border-dashed border-muted-foreground"
@@ -141,7 +141,7 @@ export default function Onboarding() {
  
          {/* Step 2: Display Name */}
          {step === 2 && (
-           <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+           <div className="flex-1 flex flex-col items-center justify-center -mt-16 space-y-4">
              <h2 className="text-2xl font-bold text-center">What's your name?</h2>
              <p className="text-muted-foreground text-center">
                This is how you'll appear to others
@@ -151,7 +151,7 @@ export default function Onboarding() {
                value={displayName}
                onChange={(e) => setDisplayName(e.target.value)}
                placeholder="Your name"
-               className="max-w-xs text-center text-lg bg-secondary"
+               className="max-w-xs text-center text-lg bg-secondary mt-4"
                maxLength={50}
              />
            </div>
@@ -159,20 +159,20 @@ export default function Onboarding() {
  
          {/* Step 3: Bio */}
          {step === 3 && (
-           <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+           <div className="flex-1 flex flex-col items-center justify-center -mt-16 space-y-4">
              <h2 className="text-2xl font-bold text-center">Add a short bio</h2>
              <p className="text-muted-foreground text-center">
-               Tell people a little about yourself
+               Tell people why you're here
              </p>
              
-             <div className="w-full max-w-xs">
+             <div className="w-full max-w-xs mt-4">
                <Textarea
                  value={bio}
                  onChange={(e) => setBio(e.target.value)}
                  placeholder="A few words about you..."
-                className="resize-none bg-secondary h-14"
-                rows={1}
-                maxLength={80}
+                 className="resize-none bg-secondary"
+                 rows={2}
+                 maxLength={80}
                />
                <p className="text-xs text-muted-foreground text-right mt-1">
                 {bio.length}/80
@@ -192,26 +192,28 @@ export default function Onboarding() {
        </div>
  
        {/* Continue Button */}
-       <Button
-         onClick={handleContinue}
-         disabled={!canContinue() || loading}
-         className="w-full mt-8"
-         size="lg"
-       >
-         {loading ? (
-           'Saving...'
-         ) : step === 3 ? (
-           <>
-             <Check className="w-5 h-5 mr-2" />
-             Complete
-           </>
-         ) : (
-           <>
-             Continue
-             <ArrowRight className="w-5 h-5 ml-2" />
-           </>
-         )}
-       </Button>
+       <div className="flex justify-center mt-6">
+         <Button
+           onClick={handleContinue}
+           disabled={!canContinue() || loading}
+           className="w-4/5 max-w-xs"
+           size="lg"
+         >
+           {loading ? (
+             'Saving...'
+           ) : step === 3 ? (
+             <>
+               <Check className="w-5 h-5 mr-2" />
+               Complete
+             </>
+           ) : (
+             <>
+               Continue
+               <ArrowRight className="w-5 h-5 ml-2" />
+             </>
+           )}
+         </Button>
+       </div>
      </div>
    );
  }
