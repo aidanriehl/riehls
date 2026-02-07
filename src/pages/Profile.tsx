@@ -79,9 +79,7 @@ const Profile = () => {
         <button onClick={() => navigate(-1)} className="p-2 -ml-2">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <span className="flex-1 text-center font-semibold">
-          {profile?.username || displayName.toLowerCase()}
-        </span>
+        <span className="flex-1" /> {/* Spacer for centering icons */}
         <div className="flex items-center gap-1">
           <button className="p-2" onClick={() => navigate('/messages')}>
             <MessageCircle className="w-5 h-5" />
