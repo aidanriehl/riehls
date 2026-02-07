@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Heart, Send } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
@@ -25,10 +25,32 @@ function formatTimeAgo(dateString: string): string {
   return `${Math.floor(seconds / 604800)}w`;
 }
 
+// Generate a consistent emoji based on video ID
+function getFirstCommentEmoji(videoId: string): string {
+  const emojis = ['🔥', '💯', '🕴️', '🤭'];
+  const hash = Math.abs(videoId.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0));
+  return emojis[hash % emojis.length];
+}
+
 export function CommentsSheet({ videoId, isOpen, onClose }: CommentsSheetProps) {
-  const [comments, setComments] = useState<Comment[]>(
-    mockComments.filter((c) => c.videoId === videoId)
-  );
+  // Create the fake first comment
+  const fakeFirstComment: Comment = useMemo(() => ({
+    id: `fake-first-${videoId}`,
+    videoId,
+    userId: 'aidans-friend',
+    username: 'aidans_friend',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop',
+    text: `first comment! ${getFirstCommentEmoji(videoId)}`,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
+    likeCount: 12,
+    isLiked: false,
+  }), [videoId]);
+
+  const [comments, setComments] = useState<Comment[]>(() => {
+    const realComments = mockComments.filter((c) => c.videoId === videoId);
+    // Add fake first comment at the end (so it appears as oldest/first)
+    return [...realComments, fakeFirstComment];
+  });
   const [newComment, setNewComment] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -1,15 +1,80 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Grid3X3 } from 'lucide-react';
+import { ArrowLeft, Grid3X3, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UnfollowDialog } from '@/components/UnfollowDialog';
-import { mockVideos } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
+
+interface CreatorVideo {
+  id: string;
+  thumbnailUrl: string | null;
+}
+
+// Fetch the admin profile (the creator)
+const useCreatorProfile = () => {
+  const [profile, setProfile] = useState<{
+    displayName: string;
+    avatarUrl: string;
+    bio: string;
+  } | null>(null);
+  const [videos, setVideos] = useState<CreatorVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCreator = async () => {
+      // Get the admin user's profile by looking up user_roles
+      const { data: adminRole } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (adminRole?.user_id) {
+        // Get admin's profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('display_name, avatar_url, bio')
+          .eq('id', adminRole.user_id)
+          .maybeSingle();
+
+        if (profileData) {
+          setProfile({
+            displayName: profileData.display_name || 'Aidan',
+            avatarUrl: profileData.avatar_url || '/placeholder.svg',
+            bio: profileData.bio || 'Creating moments worth sharing ✨',
+          });
+        }
+
+        // Get admin's videos
+        const { data: videosData } = await supabase
+          .from('videos')
+          .select('id, thumbnail_url')
+          .eq('creator_id', adminRole.user_id)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false });
+
+        if (videosData) {
+          setVideos(videosData.map(v => ({
+            id: v.id,
+            thumbnailUrl: v.thumbnail_url,
+          })));
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchCreator();
+  }, []);
+
+  return { profile, videos, loading };
+};
 
 const CreatorProfile = () => {
   const navigate = useNavigate();
   const [isFollowing, setIsFollowing] = useState(true);
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
+  const { profile, videos, loading } = useCreatorProfile();
 
   const handleFollowClick = () => {
     if (isFollowing) {
@@ -19,7 +84,13 @@ const CreatorProfile = () => {
     }
   };
 
-  const postCount = mockVideos.length;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -37,13 +108,13 @@ const CreatorProfile = () => {
         {/* Avatar and Stats Row */}
         <div className="flex items-center gap-8">
           <Avatar className="w-20 h-20">
-            <AvatarImage src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop" />
+            <AvatarImage src={profile?.avatarUrl} />
             <AvatarFallback>A</AvatarFallback>
           </Avatar>
 
           <div className="flex flex-1 justify-around">
             <div className="text-center">
-              <div className="font-semibold">{postCount}</div>
+              <div className="font-semibold">{videos.length}</div>
               <div className="text-sm text-muted-foreground">posts</div>
             </div>
             <div className="text-center">
@@ -59,9 +130,9 @@ const CreatorProfile = () => {
 
         {/* Name and Bio */}
         <div className="mt-4">
-          <h1 className="font-semibold">Aidan</h1>
+          <h1 className="font-semibold">{profile?.displayName}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Creating moments worth sharing ✨
+            {profile?.bio}
           </p>
         </div>
 
@@ -93,14 +164,14 @@ const CreatorProfile = () => {
 
       {/* Posts Grid */}
       <div className="grid grid-cols-3 gap-0.5">
-        {mockVideos.map((video) => (
+        {videos.map((video) => (
           <div 
             key={video.id} 
             className="aspect-square bg-muted cursor-pointer"
             onClick={() => navigate('/')}
           >
             <img 
-              src={video.thumbnailUrl} 
+              src={video.thumbnailUrl || '/placeholder.svg'} 
               alt="" 
               className="w-full h-full object-cover"
             />
