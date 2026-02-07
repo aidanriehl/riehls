@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Settings, Heart, Bell, Grid3X3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Settings, Heart, Grid3X3, MessageCircle, ArrowLeft } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
-import { LikedVideos } from '@/components/LikedVideos';
 import { NotificationsList } from '@/components/NotificationsList';
 import { ProfileSettingsSheet } from '@/components/ProfileSettingsSheet';
 import { useVideos } from '@/hooks/useVideos';
@@ -10,7 +10,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
-type Tab = 'posts' | 'notifications' | 'liked';
+type Tab = 'posts' | 'activity';
 
 const DEFAULT_TAB: Tab = 'posts';
 
@@ -22,16 +22,15 @@ interface MyVideo {
 }
 
 const Profile = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>(DEFAULT_TAB);
-  const { getLikedVideos } = useVideos();
-  const likedVideos = getLikedVideos();
   const [showSettings, setShowSettings] = useState(false);
   const { profile, loading: profileLoading } = useProfile();
   const { user, isAdmin } = useAuth();
   const [myVideos, setMyVideos] = useState<MyVideo[]>([]);
   const [videosLoading, setVideosLoading] = useState(true);
 
-  // Fetch user's own videos
+  // Fetch user's own videos (for admin, fetch all published videos since admin = creator)
   useEffect(() => {
     const fetchMyVideos = async () => {
       if (!user) {
@@ -39,6 +38,8 @@ const Profile = () => {
         return;
       }
       
+      // For admin, we need to get the admin's videos (the creator's videos)
+      // Since there's only one creator, we fetch videos where creator_id matches
       const { data, error } = await supabase
         .from('videos')
         .select('id, thumbnail_url, like_count, comment_count')
@@ -70,32 +71,59 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header - minimal, no border */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg">
-        <div className="flex items-center justify-end px-4 h-11">
+      {/* Header */}
+      <header className="sticky top-0 z-40 flex items-center h-14 px-4 border-b border-border bg-background">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2">
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <span className="flex-1 text-center font-semibold">
+          {profile?.username || displayName.toLowerCase()}
+        </span>
+        <div className="flex items-center gap-1">
+          <button className="p-2" onClick={() => navigate('/messages')}>
+            <MessageCircle className="w-5 h-5" />
+          </button>
           <button className="p-2 -mr-2" onClick={() => setShowSettings(true)}>
             <Settings className="w-5 h-5" />
           </button>
         </div>
       </header>
 
-      {/* Profile info - reduced top padding */}
-      <div className="px-4 py-3">
-        <div className="flex items-center gap-4">
+      {/* Profile Info - Instagram style layout */}
+      <div className="px-4 py-6">
+        {/* Avatar and Stats Row */}
+        <div className="flex items-center gap-8">
           <img
             src={avatarUrl}
             alt={displayName}
             className="w-20 h-20 rounded-full object-cover"
           />
-          <div>
-            <h2 className="text-xl font-bold">{displayName}</h2>
-            <p className="text-muted-foreground text-sm mt-1">{bio}</p>
+
+          <div className="flex flex-1 justify-around">
+            <div className="text-center">
+              <div className="font-semibold">{myVideos.length}</div>
+              <div className="text-sm text-muted-foreground">posts</div>
+            </div>
+            <div className="text-center">
+              <div className="font-semibold">802</div>
+              <div className="text-sm text-muted-foreground">credit score</div>
+            </div>
+            <div className="text-center">
+              <div className="font-semibold">225</div>
+              <div className="text-sm text-muted-foreground">bench press</div>
+            </div>
           </div>
+        </div>
+
+        {/* Name and Bio */}
+        <div className="mt-4">
+          <h1 className="font-semibold">{displayName}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{bio}</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-border">
+      {/* Tabs - only Posts and Activity (heart icon for activity) */}
+      <div className="flex border-t border-b border-border">
         <button
           onClick={() => setActiveTab('posts')}
           className={cn(
@@ -105,29 +133,18 @@ const Profile = () => {
               : 'border-transparent text-muted-foreground'
           )}
         >
-          <Grid3X3 className="w-5 h-5" />
+          <Grid3X3 className="w-6 h-6" />
         </button>
         <button
-          onClick={() => setActiveTab('notifications')}
+          onClick={() => setActiveTab('activity')}
           className={cn(
             'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
-            activeTab === 'notifications'
+            activeTab === 'activity'
               ? 'border-foreground text-foreground'
               : 'border-transparent text-muted-foreground'
           )}
         >
-          <Bell className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => setActiveTab('liked')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
-            activeTab === 'liked'
-              ? 'border-foreground text-foreground'
-              : 'border-transparent text-muted-foreground'
-          )}
-        >
-          <Heart className="w-5 h-5" />
+          <Heart className="w-6 h-6" />
         </button>
       </div>
 
@@ -174,8 +191,6 @@ const Profile = () => {
               ))}
             </div>
           )
-        ) : activeTab === 'liked' ? (
-          <LikedVideos videos={likedVideos} />
         ) : (
           <NotificationsList />
         )}
