@@ -1,153 +1,104 @@
 
+# Fix Profile Synchronization Across All Views
 
-# Convert Uploaded Images to JPEG for Compatibility
+## The Problem
 
-## Problem
+When you edit your profile (name, bio, avatar), three different places in the app show different data because they each fetch independently:
 
-Your friend identified the issue correctly - certain image formats (especially Apple's HEIC) are not well supported by:
-- Web browsers (can't display HEIC natively)
-- Storage systems (may reject or mishandle HEIC files)
+1. **Your profile page** (`/profile` - bottom nav) - Uses `useProfile()` hook
+2. **Creator profile** (`/creator` - click "aidan" in feed) - Has its own `useCreatorProfile()` hook  
+3. **Video feed** - Creator info comes from `useVideos()` with a database join
 
-Currently, the app preserves whatever format the user uploads, which causes failures with HEIC and other uncommon formats.
-
-## Solution
-
-Convert all uploaded images to JPEG format before uploading to storage using the HTML Canvas API. This approach:
-- Works entirely in the browser (no server-side processing needed)
-- Ensures maximum compatibility across all devices
-- Often reduces file size due to JPEG compression
-- Guarantees the image can be displayed in any browser
+After editing, only place #1 updates because the Settings Sheet only updates the `useProfile()` state. The other two pages show stale data until you refresh.
 
 ---
 
-## Changes Required
+## The Solution
 
-### File: `src/hooks/useProfile.ts`
+Make the Settings Sheet properly save to the database, then ensure all places pull fresh data.
 
-Add a helper function to convert any image to JPEG:
+### Changes
 
-```typescript
-const convertToJpeg = async (file: File): Promise<Blob> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      canvas.toBlob(
-        (blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error('Failed to convert image'));
-        },
-        'image/jpeg',
-        0.9  // 90% quality
-      );
-    };
-    
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = URL.createObjectURL(file);
-  });
-};
-```
+**1. ProfileSettingsSheet.tsx**
+- Call `updateProfile()` from `useProfile()` to actually persist name/bio changes to the database (avatar already saves correctly)
+- Currently `onSave()` is called but Profile.tsx's `handleProfileSave` is empty
 
-Update `uploadAvatar` to use this conversion:
+**2. Profile.tsx**
+- After saving, call `profile.refetch()` to refresh the profile data
+- Alternatively: have the settings sheet trigger a refetch via callback
 
-```typescript
-const uploadAvatar = async (file: File) => {
-  // ... auth check
-  
-  // Always use .jpg extension since we convert to JPEG
-  const filePath = `${user.id}/avatar.jpg`;
-  
-  // Convert image to JPEG for maximum compatibility
-  const jpegBlob = await convertToJpeg(file);
-  
-  const { data, error } = await supabase.storage
-    .from('avatars')
-    .upload(filePath, jpegBlob, {
-      contentType: 'image/jpeg',
-      upsert: true,
-      cacheControl: '3600',
-    });
-  
-  // ... rest of function
-};
-```
+**3. CreatorProfile.tsx** 
+- Instead of using a local `useCreatorProfile()` hook, reuse `useProfile()` since you (the admin) are the creator
+- This way both pages share the same data source
 
-### File: `src/pages/Onboarding.tsx`
-
-Update the file input to be more explicit about accepted types, but still allow all images since we'll convert them:
-
-```typescript
-<input
-  type="file"
-  accept="image/*"  // Accept all images - we convert to JPEG
-  onChange={handleAvatarChange}
-  className="hidden"
-/>
-```
-
-No change needed here - the current `accept="image/*"` is correct.
+**4. useVideos.ts (for feed)**
+- After profile changes, the video feed still shows old creator data
+- Option A: Invalidate/refetch videos on profile update (cleanest)
+- Option B: Subscribe to profile changes with realtime (more complex)
+- Recommended: React Query's `queryClient.invalidateQueries()` or a simple refetch callback
 
 ---
 
-## Technical Flow
+## Technical Implementation
 
 ```text
-User selects image (any format: HEIC, PNG, WebP, etc.)
-       |
-       v
-Validate size < 5MB
-       |
-       v
-Show local preview (may fail for HEIC - that's OK)
-       |
-       v
-User clicks Continue
-       |
-       v
-convertToJpeg() runs:
-  - Create Image element
-  - Draw to Canvas
-  - Export as JPEG blob (90% quality)
-       |
-       v
-Upload JPEG to storage with .jpg extension
-       |
-       v
-Success! Image displays correctly everywhere
+Current Flow (broken):
+┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│  /profile page     │    │  /creator page     │    │  Feed/VideoCaption │
+│  useProfile()      │    │  useCreatorProfile │    │  useVideos()       │
+│  (fetches profile) │    │  (fetches profile) │    │  (fetches videos+  │
+└────────────────────┘    └────────────────────┘    │   creator join)    │
+         ▲                         ▲               └────────────────────┘
+         │                         │                         ▲
+         │ updates                 │ stale                   │ stale
+         │                         │                         │
+┌────────────────────┐                                      │
+│ ProfileSettingsSheet                                      │
+│ updateProfile()    │──────────────────────────────────────┘
+│ (saves to DB)      │
+└────────────────────┘
+
+Fixed Flow:
+┌────────────────────────────────────────────────────────────┐
+│                    useProfile() hook                        │
+│  - Shared profile state for all admin profile displays     │
+│  - refetch() triggers refresh everywhere                   │
+└────────────────────────────────────────────────────────────┘
+         ▲                         ▲                ▲
+         │                         │                │
+┌────────────┐           ┌──────────────┐    ┌──────────────┐
+│  /profile  │           │  /creator    │    │ VideoCaption │
+│    page    │           │    page      │    │ (pass from   │
+└────────────┘           └──────────────┘    │  useProfile) │
+                                             └──────────────┘
 ```
 
----
+### File Changes
 
-## Files to Modify
+**src/components/ProfileSettingsSheet.tsx:**
+- Accept `updateProfile` function as prop (or import useProfile directly)
+- Call `updateProfile({ display_name, bio })` before showing success toast
 
-| File | Changes |
-|------|---------|
-| `src/hooks/useProfile.ts` | Add `convertToJpeg` helper, update `uploadAvatar` to convert before upload |
+**src/pages/Profile.tsx:**
+- Pass `updateProfile` and `refetch` to ProfileSettingsSheet
+- Update `handleProfileSave` to actually persist data
 
----
+**src/pages/CreatorProfile.tsx:**
+- For admin: use `useProfile()` instead of local hook
+- For non-admin visitors: keep fetching the admin's profile from DB
 
-## Edge Cases Handled
-
-| Format | Before | After |
-|--------|--------|-------|
-| HEIC (iPhone) | Upload fails | Converts to JPEG, works |
-| PNG | Works but large | Converts to smaller JPEG |
-| WebP | May have issues | Converts to JPEG |
-| JPEG | Works | No change needed (still works) |
-| GIF | Works | Converts to static JPEG |
+**src/hooks/useVideos.ts:**
+- Add a `refetch` function that can be called after profile updates
+- Or use React Query's built-in invalidation
 
 ---
 
-## Benefits
+## Summary
 
-1. **Universal compatibility** - JPEG works everywhere
-2. **Smaller file sizes** - JPEG compression is efficient
-3. **Consistent storage** - All avatars are `.jpg` files
-4. **No server-side processing** - Canvas API works in browser
-5. **iPhone photos just work** - HEIC automatically converted
+| Location | Current Data Source | After Fix |
+|----------|-------------------|-----------|
+| /profile | useProfile() | useProfile() (unchanged) |
+| /creator | Local useCreatorProfile() | useProfile() for admin, or refetch on mount |
+| Feed caption | useVideos() join | Refetch after profile changes |
 
+This ensures that when you edit your profile, all three views update immediately to show the same data.
