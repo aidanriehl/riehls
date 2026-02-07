@@ -25,9 +25,9 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
   const lastTapRef = useRef<number>(0);
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-   // Check if URL is an HLS stream (Cloudflare Stream)
+   // Check if URL is an HLS stream
    const isHlsUrl = useCallback((url: string) => {
-     return url.includes('.m3u8') || url.includes('cloudflarestream.com');
+     return url.includes('.m3u8');
    }, []);
  
    // Initialize HLS.js for Cloudflare Stream videos
@@ -35,16 +35,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
     const videoElement = videoRef.current;
     if (!videoElement) return;
 
-     const videoUrl = video.videoUrl;
- 
-     // Check if this is a Cloudflare Stream URL (watch.cloudflarestream.com)
-     // Convert watch URL to HLS manifest URL if needed
-     let hlsUrl = videoUrl;
-     if (videoUrl.includes('watch.cloudflarestream.com')) {
-       const videoId = videoUrl.split('/').pop();
-       // Use the iframe embed player for better compatibility
-       hlsUrl = `https://customer-${videoId?.substring(0, 8) || ''}.cloudflarestream.com/${videoId}/manifest/video.m3u8`;
-     }
+     const hlsUrl = video.videoUrl;
  
      // Cleanup previous HLS instance
      if (hlsRef.current) {
@@ -69,19 +60,19 @@ export function VideoPlayer({ video, isActive, onLike, onSave }: VideoPlayerProp
          }
        });
  
-       hls.on(Hls.Events.ERROR, (event, data) => {
-         console.error('HLS error:', data);
-         if (data.fatal) {
-           // Fallback to direct playback
-           videoElement.src = videoUrl;
-         }
-       });
-     } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-       // Native HLS support (Safari)
-       videoElement.src = hlsUrl;
-     } else {
-       // Regular video file
-       videoElement.src = videoUrl;
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          console.error('HLS error:', data);
+          if (data.fatal) {
+            // Fallback to direct playback
+            videoElement.src = hlsUrl;
+          }
+        });
+      } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (Safari)
+        videoElement.src = hlsUrl;
+      } else {
+        // Regular video file
+        videoElement.src = hlsUrl;
      }
  
      return () => {
