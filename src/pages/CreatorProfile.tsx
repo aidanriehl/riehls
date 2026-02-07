@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Grid3X3, Heart } from 'lucide-react';
+import { ArrowLeft, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UnfollowDialog } from '@/components/UnfollowDialog';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -107,10 +106,11 @@ const CreatorProfile = () => {
       <div className="px-4 py-6">
         {/* Avatar and Stats Row */}
         <div className="flex items-center gap-8">
-          <Avatar className="w-20 h-20">
-            <AvatarImage src={profile?.avatarUrl} />
-            <AvatarFallback>A</AvatarFallback>
-          </Avatar>
+          <img
+            src={profile?.avatarUrl || '/placeholder.svg'}
+            alt={profile?.displayName}
+            className="w-20 h-20 rounded-full object-cover"
+          />
 
           <div className="flex flex-1 justify-around">
             <div className="text-center">
