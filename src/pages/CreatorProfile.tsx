@@ -117,7 +117,16 @@ const CreatorProfile = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 flex items-center h-14 px-4 border-b border-border bg-background">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2">
+        <button 
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate('/');
+            }
+          }} 
+          className="p-2 -ml-2"
+        >
           <ArrowLeft className="w-6 h-6" />
         </button>
         <span className="flex-1 text-center font-semibold">{headerUsername}</span>
