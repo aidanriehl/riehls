@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, ArrowRight, Check } from 'lucide-react';
+import { Camera, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -198,17 +198,17 @@ export default function Onboarding() {
          )}
        </div>
  
-       {/* Continue Button */}
-       <div className="flex justify-center mt-6">
-         <Button
-           onClick={handleContinue}
-           disabled={!canContinue() || loading}
-           className="w-4/5 max-w-xs"
-           size="lg"
-         >
-          {loading ? 'Saving...' : step === 3 ? 'Complete' : 'Continue'}
-         </Button>
-       </div>
+        <div className="flex justify-center mt-6">
+          <Button
+            onClick={handleContinue}
+            disabled={!canContinue() || loading}
+            className="w-4/5 max-w-xs"
+            size="lg"
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {loading ? 'Saving...' : step === 3 ? 'Complete' : 'Continue'}
+          </Button>
+        </div>
      </div>
    );
  }
