@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface NotificationData {
   id: string;
-  type: 'like' | 'comment' | 'join';
+  type: 'like' | 'comment' | 'signup';
   actorName: string;
   actorAvatar: string;
   message: string;
@@ -56,16 +56,27 @@ export function NotificationsList() {
         .limit(50);
 
       if (!error && data) {
-        const mapped: NotificationData[] = data.map((n: any) => ({
-          id: n.id,
-          type: n.type as 'like' | 'comment',
-          actorName: n.actor?.display_name || n.actor?.username || 'Someone',
-          actorAvatar: n.actor?.avatar_url || '/placeholder.svg',
-          message: n.type === 'like' ? 'liked your video' : `commented: "${n.message?.slice(0, 30) || '...'}"`,
-          videoThumbnail: n.video?.thumbnail_url || null,
-          createdAt: n.created_at,
-          isRead: n.is_read,
-        }));
+        const mapped: NotificationData[] = data.map((n: any) => {
+          let message = '';
+          if (n.type === 'like') {
+            message = 'liked your video';
+          } else if (n.type === 'comment') {
+            message = `commented: "${n.message?.slice(0, 30) || '...'}"`;
+          } else if (n.type === 'signup') {
+            message = n.message || 'joined riehls';
+          }
+          
+          return {
+            id: n.id,
+            type: n.type as 'like' | 'comment' | 'signup',
+            actorName: n.actor?.display_name || n.actor?.username || 'Someone',
+            actorAvatar: n.actor?.avatar_url || '/placeholder.svg',
+            message,
+            videoThumbnail: n.video?.thumbnail_url || null,
+            createdAt: n.created_at,
+            isRead: n.is_read,
+          };
+        });
         setNotifications(mapped);
       }
       setLoading(false);
@@ -116,7 +127,7 @@ export function NotificationsList() {
             <div
               className={cn(
                 "absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center",
-                notification.type === 'join' ? 'bg-primary' : 'bg-like'
+                notification.type === 'signup' ? 'bg-primary' : 'bg-like'
               )}
             >
               {notification.type === 'like' ? (

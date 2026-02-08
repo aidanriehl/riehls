@@ -111,7 +111,7 @@ export type Database = {
           message: string | null
           recipient_id: string
           type: Database["public"]["Enums"]["notification_type"]
-          video_id: string
+          video_id: string | null
         }
         Insert: {
           actor_id: string
@@ -121,7 +121,7 @@ export type Database = {
           message?: string | null
           recipient_id: string
           type: Database["public"]["Enums"]["notification_type"]
-          video_id: string
+          video_id?: string | null
         }
         Update: {
           actor_id?: string
@@ -131,7 +131,7 @@ export type Database = {
           message?: string | null
           recipient_id?: string
           type?: Database["public"]["Enums"]["notification_type"]
-          video_id?: string
+          video_id?: string | null
         }
         Relationships: [
           {
@@ -268,7 +268,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      notification_type: "like" | "comment"
+      notification_type: "like" | "comment" | "signup"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -397,7 +397,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      notification_type: ["like", "comment"],
+      notification_type: ["like", "comment", "signup"],
     },
   },
 } as const
