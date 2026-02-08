@@ -28,67 +28,51 @@ const CreatorProfile = () => {
 
   useEffect(() => {
     const fetchCreatorData = async () => {
-      // If current user is admin, use their profile from useProfile() hook
-      if (isAdmin && adminProfile) {
+      // Use security definer function to get admin user ID (bypasses RLS)
+      const { data: adminUserId } = await supabase.rpc('get_admin_user_id');
+      
+      if (!adminUserId) {
+        setLoading(false);
+        return;
+      }
+
+      // Fetch admin's profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url, bio')
+        .eq('id', adminUserId)
+        .maybeSingle();
+
+      if (profileData) {
         setCreatorProfile({
-          displayName: adminProfile.display_name || 'Aidan',
-          avatarUrl: adminProfile.avatar_url || '/placeholder.svg',
-          bio: adminProfile.bio || 'Creating moments worth sharing ✨',
+          displayName: profileData.display_name || 'Aidan',
+          avatarUrl: profileData.avatar_url || '/placeholder.svg',
+          bio: profileData.bio || 'Creating moments worth sharing ✨',
         });
-      } else {
-        // For non-admin visitors, fetch the admin's profile from DB
-        const { data: adminRole } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .eq('role', 'admin')
-          .maybeSingle();
-
-        if (adminRole?.user_id) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url, bio')
-            .eq('id', adminRole.user_id)
-            .maybeSingle();
-
-          if (profileData) {
-            setCreatorProfile({
-              displayName: profileData.display_name || 'Aidan',
-              avatarUrl: profileData.avatar_url || '/placeholder.svg',
-              bio: profileData.bio || 'Creating moments worth sharing ✨',
-            });
-          }
-        }
       }
 
       // Fetch admin's videos
-      const { data: adminRole } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin')
-        .maybeSingle();
+      const { data: videosData } = await supabase
+        .from('videos')
+        .select('id, thumbnail_url')
+        .eq('creator_id', adminUserId)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
 
-      if (adminRole?.user_id) {
-        const { data: videosData } = await supabase
-          .from('videos')
-          .select('id, thumbnail_url')
-          .eq('creator_id', adminRole.user_id)
-          .eq('is_published', true)
-          .order('created_at', { ascending: false });
-
-        if (videosData) {
-          setVideos(videosData.map(v => ({
-            id: v.id,
-            thumbnailUrl: v.thumbnail_url,
-          })));
-        }
+      if (videosData) {
+        setVideos(videosData.map(v => ({
+          id: v.id,
+          thumbnailUrl: v.thumbnail_url,
+        })));
       }
+      
       setLoading(false);
     };
 
     if (!profileLoading) {
       fetchCreatorData();
     }
-  }, [isAdmin, adminProfile, profileLoading]);
+  }, [profileLoading]);
 
   const handleFollowClick = () => {
     if (isFollowing) {
