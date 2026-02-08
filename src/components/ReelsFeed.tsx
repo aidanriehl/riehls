@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { VideoPlayer } from './VideoPlayer';
 import { useVideos } from '@/hooks/useVideos';
 import { Loader2 } from 'lucide-react';
@@ -7,7 +7,9 @@ import { Loader2 } from 'lucide-react';
 export function ReelsFeed() {
   const { videos, loading, toggleLike, toggleSave, deleteVideo } = useVideos();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const startVideoId = searchParams.get('video');
+  const fromCreatorProfile = location.state?.fromCreatorProfile === true;
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScrolledToVideo = useRef(false);
@@ -76,6 +78,7 @@ export function ReelsFeed() {
           onLike={() => toggleLike(video.id)}
           onSave={() => toggleSave(video.id)}
           onDelete={() => deleteVideo(video.id)}
+          showBackButton={fromCreatorProfile && index === activeIndex}
         />
       ))}
     </div>

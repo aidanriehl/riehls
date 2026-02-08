@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Play, Heart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, Heart, ArrowLeft } from 'lucide-react';
 import Hls from 'hls.js';
 import { Video } from '@/types';
 import { VideoActions } from './VideoActions';
@@ -13,9 +14,11 @@ interface VideoPlayerProps {
   onLike: () => void;
   onSave: () => void;
   onDelete: () => void;
+  showBackButton?: boolean;
 }
 
-export function VideoPlayer({ video, isActive, onLike, onSave, onDelete }: VideoPlayerProps) {
+export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBackButton = false }: VideoPlayerProps) {
+  const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -176,6 +179,16 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onDelete }: Video
         onTouchEnd={handleTouchEnd}
         poster={video.thumbnailUrl}
       />
+
+      {/* Back button when coming from creator profile */}
+      {showBackButton && (
+        <button
+          onClick={() => navigate('/creator')}
+          className="absolute top-4 left-4 z-50 p-2 rounded-full bg-background/30 backdrop-blur-sm"
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+      )}
 
       {/* Gradient overlays */}
       <div className="absolute top-0 left-0 right-0 h-32 top-gradient pointer-events-none" />

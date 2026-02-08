@@ -175,7 +175,7 @@ const CreatorProfile = () => {
           <div 
             key={video.id} 
             className="aspect-square bg-muted cursor-pointer"
-            onClick={() => navigate(`/?video=${video.id}`)}
+            onClick={() => navigate(`/?video=${video.id}`, { state: { fromCreatorProfile: true } })}
           >
             <img 
               src={video.thumbnailUrl || '/placeholder.svg'} 
