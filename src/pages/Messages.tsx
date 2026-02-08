@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Heart, Reply, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -11,6 +12,11 @@ interface Message {
   timestamp: Date;
   isLiked: boolean;
   replyToId?: string;
+}
+
+interface CreatorProfile {
+  displayName: string;
+  avatarUrl: string;
 }
 
 const SUGGESTIONS = [
@@ -26,10 +32,41 @@ const Messages = () => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [revealedTimestamp, setRevealedTimestamp] = useState<string | null>(null);
   const [swipeState, setSwipeState] = useState<{ id: string; offset: number } | null>(null);
+  const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
   
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const lastTapTime = useRef<{ [key: string]: number }>({});
+
+  // Fetch admin/creator profile
+  useEffect(() => {
+    const fetchCreatorProfile = async () => {
+      // Get the admin user's profile
+      const { data: adminRole } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin')
+        .limit(1)
+        .single();
+      
+      if (adminRole) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name, avatar_url')
+          .eq('id', adminRole.user_id)
+          .single();
+        
+        if (profile) {
+          setCreatorProfile({
+            displayName: profile.display_name || 'aidan',
+            avatarUrl: profile.avatar_url || '/placeholder.svg',
+          });
+        }
+      }
+    };
+
+    fetchCreatorProfile();
+  }, []);
 
   const handleSend = () => {
     if (!newMessage.trim()) return;
@@ -155,11 +192,16 @@ const Messages = () => {
         <button onClick={() => navigate(-1)} className="p-2 -ml-2">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <Avatar className="w-10 h-10">
-          <AvatarImage src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop" />
-          <AvatarFallback>A</AvatarFallback>
-        </Avatar>
-        <span className="font-semibold">aidan</span>
+        <button 
+          onClick={() => navigate('/creator')}
+          className="flex items-center gap-3"
+        >
+          <Avatar className="w-10 h-10">
+            <AvatarImage src={creatorProfile?.avatarUrl || '/placeholder.svg'} />
+            <AvatarFallback>{creatorProfile?.displayName?.[0]?.toUpperCase() || 'A'}</AvatarFallback>
+          </Avatar>
+          <span className="font-semibold">{creatorProfile?.displayName || 'aidan'}</span>
+        </button>
       </header>
 
       {/* Messages */}
