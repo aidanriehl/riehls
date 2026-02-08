@@ -8,7 +8,8 @@
  import Index from "./pages/Index";
  import Profile from "./pages/Profile";
  import CreatorProfile from "./pages/CreatorProfile";
- import Messages from "./pages/Messages";
+import Messages from "./pages/Messages";
+import MessageConversation from "./pages/MessageConversation";
  import Auth from "./pages/Auth";
  import Onboarding from "./pages/Onboarding";
  import AdminUpload from "./pages/AdminUpload";
@@ -45,11 +46,16 @@ const App = () => (
                  <CreatorProfile />
                </ProtectedRoute>
              } />
-             <Route path="/messages" element={
-               <ProtectedRoute>
-                 <Messages />
-               </ProtectedRoute>
-             } />
+            <Route path="/messages" element={
+                <ProtectedRoute>
+                  <Messages />
+                </ProtectedRoute>
+              } />
+              <Route path="/messages/:oderId" element={
+                <ProtectedRoute>
+                  <MessageConversation />
+                </ProtectedRoute>
+              } />
              <Route path="/admin/upload" element={
                <ProtectedRoute requireAdmin>
                  <AdminUpload />
