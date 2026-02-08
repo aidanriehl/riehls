@@ -129,8 +129,6 @@ const CreatorProfile = () => {
         >
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <span className="flex-1 text-center font-semibold">{headerUsername}</span>
-        <div className="w-10" /> {/* Spacer for centering */}
       </header>
 
       {/* Profile Info */}
