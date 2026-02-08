@@ -31,19 +31,16 @@
          navigate('/');
        }
      } else {
-       const { error } = await signUp(email, password);
-       if (error) {
-         toast({
-           title: "Sign up failed",
-           description: error.message,
-           variant: "destructive",
-         });
-       } else {
-         toast({
-           title: "Check your email",
-           description: "We sent you a confirmation link to verify your account.",
-         });
-       }
+      const { error } = await signUp(email, password);
+      if (error) {
+        toast({
+          title: "Sign up failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        navigate('/');
+      }
      }
  
      setLoading(false);
