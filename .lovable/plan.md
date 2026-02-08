@@ -1,104 +1,96 @@
 
-# Fix Profile Synchronization Across All Views
 
-## The Problem
+# One-Tap Social Sign-In with Auto-Profile
 
-When you edit your profile (name, bio, avatar), three different places in the app show different data because they each fetch independently:
+## What We're Building
+A frictionless sign-in experience where users tap one button (Google or Apple), and their profile is automatically created using their OAuth account info. No forms, no passwords, no manual onboarding steps.
 
-1. **Your profile page** (`/profile` - bottom nav) - Uses `useProfile()` hook
-2. **Creator profile** (`/creator` - click "aidan" in feed) - Has its own `useCreatorProfile()` hook  
-3. **Video feed** - Creator info comes from `useVideos()` with a database join
+## User Experience
 
-After editing, only place #1 updates because the Settings Sheet only updates the `useProfile()` state. The other two pages show stale data until you refresh.
+**Before (current):**
+1. Enter email
+2. Enter password
+3. Upload profile photo
+4. Enter name
+5. Enter bio
+6. Click Complete
+
+**After (new):**
+1. Tap "Continue with Google" or "Continue with Apple"
+2. Done - straight to the feed
+
+## Changes
+
+### 1. Configure OAuth Providers
+- Enable Google and Apple sign-in via Lovable Cloud's managed OAuth (no API keys needed - it's automatic)
+
+### 2. Redesign Auth Page
+**New layout:**
+- Logo: "riehls"
+- Tagline: "finally, a curated feed"
+- "Continue with Google" button
+- "Continue with Apple" button
+
+Remove all email/password fields and the login/signup toggle.
+
+### 3. Auto-Create Profile from OAuth Data
+When a user signs in via Google/Apple:
+- Extract their name from `user.user_metadata.full_name` or `user.user_metadata.name`
+- Extract their profile picture from `user.user_metadata.avatar_url` or `user.user_metadata.picture`
+- Auto-generate a username from their name
+- Set `onboarding_complete: true` immediately
+- Redirect straight to the home feed
+
+### 4. Update Auth Hook
+Add `signInWithGoogle()` and `signInWithApple()` methods using Lovable Cloud's OAuth integration. Add logic to detect first-time users and auto-populate their profile.
+
+### 5. Keep Onboarding as Fallback
+The onboarding flow will remain in the codebase but users won't be redirected there since `onboarding_complete` will be set to `true` on first sign-in. This serves as a fallback if OAuth metadata is missing (e.g., Apple privacy settings hide the name).
 
 ---
 
-## The Solution
+## Technical Details
 
-Make the Settings Sheet properly save to the database, then ensure all places pull fresh data.
-
-### Changes
-
-**1. ProfileSettingsSheet.tsx**
-- Call `updateProfile()` from `useProfile()` to actually persist name/bio changes to the database (avatar already saves correctly)
-- Currently `onSave()` is called but Profile.tsx's `handleProfileSave` is empty
-
-**2. Profile.tsx**
-- After saving, call `profile.refetch()` to refresh the profile data
-- Alternatively: have the settings sheet trigger a refetch via callback
-
-**3. CreatorProfile.tsx** 
-- Instead of using a local `useCreatorProfile()` hook, reuse `useProfile()` since you (the admin) are the creator
-- This way both pages share the same data source
-
-**4. useVideos.ts (for feed)**
-- After profile changes, the video feed still shows old creator data
-- Option A: Invalidate/refetch videos on profile update (cleanest)
-- Option B: Subscribe to profile changes with realtime (more complex)
-- Recommended: React Query's `queryClient.invalidateQueries()` or a simple refetch callback
-
----
-
-## Technical Implementation
-
-```text
-Current Flow (broken):
-┌────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
-│  /profile page     │    │  /creator page     │    │  Feed/VideoCaption │
-│  useProfile()      │    │  useCreatorProfile │    │  useVideos()       │
-│  (fetches profile) │    │  (fetches profile) │    │  (fetches videos+  │
-└────────────────────┘    └────────────────────┘    │   creator join)    │
-         ▲                         ▲               └────────────────────┘
-         │                         │                         ▲
-         │ updates                 │ stale                   │ stale
-         │                         │                         │
-┌────────────────────┐                                      │
-│ ProfileSettingsSheet                                      │
-│ updateProfile()    │──────────────────────────────────────┘
-│ (saves to DB)      │
-└────────────────────┘
-
-Fixed Flow:
-┌────────────────────────────────────────────────────────────┐
-│                    useProfile() hook                        │
-│  - Shared profile state for all admin profile displays     │
-│  - refetch() triggers refresh everywhere                   │
-└────────────────────────────────────────────────────────────┘
-         ▲                         ▲                ▲
-         │                         │                │
-┌────────────┐           ┌──────────────┐    ┌──────────────┐
-│  /profile  │           │  /creator    │    │ VideoCaption │
-│    page    │           │    page      │    │ (pass from   │
-└────────────┘           └──────────────┘    │  useProfile) │
-                                             └──────────────┘
+### OAuth User Metadata Structure
+Google provides:
+```
+user.user_metadata = {
+  name: "John Doe",
+  full_name: "John Doe",
+  picture: "https://lh3.googleusercontent.com/...",
+  avatar_url: "https://lh3.googleusercontent.com/..."
+}
 ```
 
-### File Changes
+Apple provides:
+```
+user.user_metadata = {
+  full_name: { firstName: "John", lastName: "Doe" },
+  picture: "..." // May be null if user hides it
+}
+```
 
-**src/components/ProfileSettingsSheet.tsx:**
-- Accept `updateProfile` function as prop (or import useProfile directly)
-- Call `updateProfile({ display_name, bio })` before showing success toast
+### Files to Modify
 
-**src/pages/Profile.tsx:**
-- Pass `updateProfile` and `refetch` to ProfileSettingsSheet
-- Update `handleProfileSave` to actually persist data
+1. **Configure OAuth** - Use the Lovable Cloud social auth configuration tool
 
-**src/pages/CreatorProfile.tsx:**
-- For admin: use `useProfile()` instead of local hook
-- For non-admin visitors: keep fetching the admin's profile from DB
+2. **`src/pages/Auth.tsx`**
+   - Remove all form state (email, password, isLogin)
+   - Import and use the Lovable OAuth module
+   - Replace form with two styled buttons (Google logo, Apple logo)
+   - Update header text to "finally, a curated feed"
 
-**src/hooks/useVideos.ts:**
-- Add a `refetch` function that can be called after profile updates
-- Or use React Query's built-in invalidation
+3. **`src/hooks/useAuth.tsx`**
+   - Add profile auto-creation logic in `onAuthStateChange`
+   - When a new user signs in via OAuth, check if their profile needs initialization
+   - Extract name/avatar from `user.user_metadata` and update the profile with `onboarding_complete: true`
 
----
+4. **`src/integrations/lovable/`** (auto-generated)
+   - The OAuth configuration tool will create this module automatically
 
-## Summary
+### Edge Case: Apple Privacy
+If a user signs in with Apple and hides their info:
+- Name may be missing → They'll still go to the feed but with no display name
+- Photo may be missing → Default avatar placeholder
+- They can always update their profile later via settings (which already exists)
 
-| Location | Current Data Source | After Fix |
-|----------|-------------------|-----------|
-| /profile | useProfile() | useProfile() (unchanged) |
-| /creator | Local useCreatorProfile() | useProfile() for admin, or refetch on mount |
-| Feed caption | useVideos() join | Refetch after profile changes |
-
-This ensures that when you edit your profile, all three views update immediately to show the same data.
