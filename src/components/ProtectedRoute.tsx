@@ -32,10 +32,12 @@ export const ProtectedRoute = forwardRef<HTMLDivElement, ProtectedRouteProps>(
       );
     }
 
+    // If no user, redirect to auth for anonymous sign-in
     if (!user) {
       return <Navigate to="/auth" state={{ from: location }} replace />;
     }
 
+    // Admin-only routes
     if (requireAdmin && !isAdmin) {
       return <Navigate to="/" replace />;
     }
@@ -43,6 +45,7 @@ export const ProtectedRoute = forwardRef<HTMLDivElement, ProtectedRouteProps>(
     // Check navigation state to bypass stale profile data after onboarding completion
     const justCompletedOnboarding = location.state?.onboardingJustCompleted;
     
+    // Redirect to onboarding if not complete (for non-admin users)
     if (requireOnboarding && profile && !profile.onboarding_complete && !justCompletedOnboarding) {
       return <Navigate to="/onboarding" replace />;
     }
