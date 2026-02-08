@@ -10,7 +10,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
-type Tab = 'posts' | 'activity';
+type Tab = 'posts' | 'activity' | 'liked';
 
 const DEFAULT_TAB: Tab = 'posts';
 
@@ -21,6 +21,11 @@ interface MyVideo {
   commentCount: number;
 }
 
+interface LikedVideo {
+  id: string;
+  thumbnailUrl: string | null;
+}
+
 const Profile = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>(DEFAULT_TAB);
@@ -29,7 +34,9 @@ const Profile = () => {
   const { user, isAdmin } = useAuth();
   const { refetch: refetchVideos } = useVideos();
   const [myVideos, setMyVideos] = useState<MyVideo[]>([]);
+  const [likedVideos, setLikedVideos] = useState<LikedVideo[]>([]);
   const [videosLoading, setVideosLoading] = useState(true);
+  const [likedLoading, setLikedLoading] = useState(true);
 
   // Fetch user's own videos (for admin, fetch all published videos since admin = creator)
   useEffect(() => {
@@ -39,8 +46,6 @@ const Profile = () => {
         return;
       }
       
-      // For admin, we need to get the admin's videos (the creator's videos)
-      // Since there's only one creator, we fetch videos where creator_id matches
       const { data, error } = await supabase
         .from('videos')
         .select('id, thumbnail_url, like_count, comment_count')
@@ -61,6 +66,32 @@ const Profile = () => {
 
     fetchMyVideos();
   }, [user]);
+
+  // Fetch liked videos (for non-admin users)
+  useEffect(() => {
+    const fetchLikedVideos = async () => {
+      if (!user || isAdmin) {
+        setLikedLoading(false);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('likes')
+        .select('video_id, videos(id, thumbnail_url)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        setLikedVideos(data.map((like: any) => ({
+          id: like.videos?.id || like.video_id,
+          thumbnailUrl: like.videos?.thumbnail_url || null,
+        })).filter((v: LikedVideo) => v.id));
+      }
+      setLikedLoading(false);
+    };
+
+    fetchLikedVideos();
+  }, [user, isAdmin]);
 
   const handleProfileSave = async () => {
     // Refetch profile and videos to sync everywhere
@@ -123,7 +154,7 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Tabs - only Posts and Activity (heart icon for activity) */}
+      {/* Tabs - Posts and Activity (admin) or Liked (non-admin) */}
       <div className="flex border-t border-b border-border">
         <button
           onClick={() => setActiveTab('posts')}
@@ -137,10 +168,10 @@ const Profile = () => {
           <Grid3X3 className="w-6 h-6" />
         </button>
         <button
-          onClick={() => setActiveTab('activity')}
+          onClick={() => setActiveTab(isAdmin ? 'activity' : 'liked')}
           className={cn(
             'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
-            activeTab === 'activity'
+            (activeTab === 'activity' || activeTab === 'liked')
               ? 'border-foreground text-foreground'
               : 'border-transparent text-muted-foreground'
           )}
@@ -193,8 +224,41 @@ const Profile = () => {
               ))}
             </div>
           )
-        ) : (
+        ) : activeTab === 'activity' ? (
           <NotificationsList />
+        ) : (
+          // Liked videos tab for non-admin
+          likedLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : likedVideos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+                <Heart className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold text-lg mb-1">No liked videos yet</h3>
+              <p className="text-muted-foreground text-sm">
+                Videos you like will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-0.5">
+              {likedVideos.map((video) => (
+                <div 
+                  key={video.id} 
+                  className="aspect-square bg-muted relative cursor-pointer"
+                  onClick={() => navigate(`/?video=${video.id}`)}
+                >
+                  <img 
+                    src={video.thumbnailUrl || '/placeholder.svg'} 
+                    alt="" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
 
