@@ -28,7 +28,6 @@ interface LikedVideo {
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<Tab>(DEFAULT_TAB);
   const [showSettings, setShowSettings] = useState(false);
   const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const { user, isAdmin } = useAuth();
@@ -37,6 +36,9 @@ const Profile = () => {
   const [likedVideos, setLikedVideos] = useState<LikedVideo[]>([]);
   const [videosLoading, setVideosLoading] = useState(true);
   const [likedLoading, setLikedLoading] = useState(true);
+  
+  // Set default tab based on role - admin sees posts, non-admin sees liked
+  const [activeTab, setActiveTab] = useState<Tab>(isAdmin ? 'posts' : 'liked');
 
   // Fetch user's own videos (for admin, fetch all published videos since admin = creator)
   useEffect(() => {
@@ -132,18 +134,37 @@ const Profile = () => {
           />
 
           <div className="flex flex-1 justify-around">
-            <div className="text-center">
-              <div className="font-semibold">{myVideos.length}</div>
-              <div className="text-sm text-muted-foreground">posts</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold">802</div>
-              <div className="text-sm text-muted-foreground">credit score</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold">225</div>
-              <div className="text-sm text-muted-foreground">bench press</div>
-            </div>
+            {isAdmin ? (
+              <>
+                <div className="text-center">
+                  <div className="font-semibold">{myVideos.length}</div>
+                  <div className="text-sm text-muted-foreground">posts</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold">802</div>
+                  <div className="text-sm text-muted-foreground">credit score</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold">225</div>
+                  <div className="text-sm text-muted-foreground">bench press</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <div className="font-semibold">{likedVideos.length}</div>
+                  <div className="text-sm text-muted-foreground">liked</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold">802</div>
+                  <div className="text-sm text-muted-foreground">credit score</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold">225</div>
+                  <div className="text-sm text-muted-foreground">bench press</div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -154,31 +175,39 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Tabs - Posts and Activity (admin) or Liked (non-admin) */}
-      <div className="flex border-t border-b border-border">
-        <button
-          onClick={() => setActiveTab('posts')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
-            activeTab === 'posts'
-              ? 'border-foreground text-foreground'
-              : 'border-transparent text-muted-foreground'
-          )}
-        >
-          <Grid3X3 className="w-6 h-6" />
-        </button>
-        <button
-          onClick={() => setActiveTab(isAdmin ? 'activity' : 'liked')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
-            (activeTab === 'activity' || activeTab === 'liked')
-              ? 'border-foreground text-foreground'
-              : 'border-transparent text-muted-foreground'
-          )}
-        >
-          <Heart className="w-6 h-6" />
-        </button>
-      </div>
+      {/* Tabs - Admin: Posts + Activity | Non-admin: just Liked (no tabs needed) */}
+      {isAdmin ? (
+        <div className="flex border-t border-b border-border">
+          <button
+            onClick={() => setActiveTab('posts')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
+              activeTab === 'posts'
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground'
+            )}
+          >
+            <Grid3X3 className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => setActiveTab('activity')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors',
+              activeTab === 'activity'
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground'
+            )}
+          >
+            <Heart className="w-6 h-6" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex border-t border-b border-border">
+          <div className="flex-1 flex items-center justify-center gap-2 py-3 border-b-2 border-foreground text-foreground">
+            <Heart className="w-6 h-6" />
+          </div>
+        </div>
+      )}
 
       {/* Tab content */}
       <div className="min-h-[300px]">
