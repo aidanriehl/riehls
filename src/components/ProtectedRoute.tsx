@@ -40,7 +40,10 @@ export const ProtectedRoute = forwardRef<HTMLDivElement, ProtectedRouteProps>(
       return <Navigate to="/" replace />;
     }
 
-    if (requireOnboarding && profile && !profile.onboarding_complete) {
+    // Check navigation state to bypass stale profile data after onboarding completion
+    const justCompletedOnboarding = location.state?.onboardingJustCompleted;
+    
+    if (requireOnboarding && profile && !profile.onboarding_complete && !justCompletedOnboarding) {
       return <Navigate to="/onboarding" replace />;
     }
 
