@@ -118,13 +118,7 @@ const CreatorProfile = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 flex items-center h-14 px-4 border-b border-border bg-background">
         <button 
-          onClick={() => {
-            if (window.history.length > 1) {
-              navigate(-1);
-            } else {
-              navigate('/');
-            }
-          }} 
+          onClick={() => navigate('/')} 
           className="p-2 -ml-2"
         >
           <ArrowLeft className="w-6 h-6" />
