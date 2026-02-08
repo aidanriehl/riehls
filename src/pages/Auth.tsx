@@ -7,7 +7,7 @@ export default function Auth() {
   const [loading, setLoading] = useState<'google' | null>(null);
   const { toast } = useToast();
 
-  const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
+  const handleOAuthSignIn = async (provider: 'google') => {
     setLoading(provider);
     
     const { error } = await lovable.auth.signInWithOAuth(provider, {
