@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Heart, Grid3X3, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Settings, Heart, Grid3X3, MessageCircle, ArrowLeft, Camera } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
 import { NotificationsList } from '@/components/NotificationsList';
 import { ProfileSettingsSheet } from '@/components/ProfileSettingsSheet';
@@ -9,6 +9,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 type Tab = 'posts' | 'activity' | 'liked';
 
@@ -29,13 +32,16 @@ interface LikedVideo {
 const Profile = () => {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
-  const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
-  const { user, isAdmin } = useAuth();
+  const { profile, loading: profileLoading, refetch: refetchProfile, uploadAvatar } = useProfile();
+  const { user, isAdmin, session } = useAuth();
   const { refetch: refetchVideos } = useVideos();
   const [myVideos, setMyVideos] = useState<MyVideo[]>([]);
   const [likedVideos, setLikedVideos] = useState<LikedVideo[]>([]);
   const [videosLoading, setVideosLoading] = useState(true);
   const [likedLoading, setLikedLoading] = useState(true);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   
   // Set default tab based on role - admin sees posts, non-admin sees liked
   const [activeTab, setActiveTab] = useState<Tab>(isAdmin ? 'posts' : 'liked');
@@ -101,6 +107,38 @@ const Profile = () => {
     await refetchVideos();
   };
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: "File too large", description: "Please choose an image under 5MB", variant: "destructive" });
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const { error, url } = await uploadAvatar(file, session?.access_token);
+      if (error) {
+        toast({ title: "Upload failed", description: "Could not upload photo. Please try again.", variant: "destructive" });
+      } else if (url) {
+        await refetchProfile();
+        await refetchVideos();
+        toast({ title: "Photo updated", description: "Your profile photo has been changed." });
+      }
+    } catch (err) {
+      toast({ title: "Upload failed", description: "Could not upload photo. Please try again.", variant: "destructive" });
+    } finally {
+      setAvatarUploading(false);
+      // Reset input so same file can be selected again
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const displayName = profile?.display_name || 'User';
   const avatarUrl = profile?.avatar_url || '/placeholder.svg';
   const bio = profile?.bio || '';
@@ -127,10 +165,35 @@ const Profile = () => {
       <div className="px-4 py-6">
         {/* Avatar and Stats Row */}
         <div className="flex items-center gap-8">
-          <img
-            src={avatarUrl}
-            alt={displayName}
-            className="w-20 h-20 rounded-full object-cover"
+          <button 
+            onClick={handleAvatarClick}
+            disabled={avatarUploading}
+            className="relative group"
+          >
+            <img
+              src={avatarUrl}
+              alt={displayName}
+              className={cn(
+                "w-20 h-20 rounded-full object-cover transition-opacity",
+                avatarUploading && "opacity-50"
+              )}
+            />
+            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Camera className="w-6 h-6 text-white" />
+            </div>
+            {avatarUploading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleAvatarChange}
+            className="hidden"
           />
 
           <div className="flex flex-1 justify-around">
