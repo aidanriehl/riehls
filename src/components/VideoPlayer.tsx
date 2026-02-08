@@ -15,9 +15,10 @@ interface VideoPlayerProps {
   onSave: () => void;
   onDelete: () => void;
   showBackButton?: boolean;
+  backDestination?: string;
 }
 
-export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBackButton = false }: VideoPlayerProps) {
+export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBackButton = false, backDestination = '/creator' }: VideoPlayerProps) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -183,7 +184,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBac
       {/* Back button when coming from creator profile */}
       {showBackButton && (
         <button
-          onClick={() => navigate('/creator')}
+          onClick={() => navigate(backDestination)}
           className="absolute top-4 left-4 z-50 p-2 rounded-full bg-background/30 backdrop-blur-sm"
         >
           <ArrowLeft className="w-6 h-6" />

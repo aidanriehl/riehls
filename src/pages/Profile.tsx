@@ -232,7 +232,7 @@ const Profile = () => {
                 <div 
                   key={video.id} 
                   className="aspect-square bg-muted relative cursor-pointer"
-                  onClick={() => navigate(`/?video=${video.id}`)}
+                  onClick={() => navigate(`/?video=${video.id}`, { state: { fromProfile: true } })}
                 >
                   <img 
                     src={video.thumbnailUrl || '/placeholder.svg'} 
@@ -277,7 +277,7 @@ const Profile = () => {
                 <div 
                   key={video.id} 
                   className="aspect-square bg-muted relative cursor-pointer"
-                  onClick={() => navigate(`/?video=${video.id}`)}
+                  onClick={() => navigate(`/?video=${video.id}`, { state: { fromProfile: true } })}
                 >
                   <img 
                     src={video.thumbnailUrl || '/placeholder.svg'} 
