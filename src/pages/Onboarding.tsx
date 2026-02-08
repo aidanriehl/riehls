@@ -69,10 +69,8 @@ export default function Onboarding() {
         // Wait for profile refetch to ensure DB consistency before navigating
         await refetch();
         
-        // Small delay to ensure ProtectedRoute sees the updated profile
-        await new Promise(resolve => setTimeout(resolve, 150));
-        
-        navigate('/', { replace: true });
+        // Navigate with state flag so ProtectedRoute bypasses stale profile check
+        navigate('/', { replace: true, state: { onboardingJustCompleted: true } });
       } catch (err) {
         toast({ title: "Failed to save", description: "Please try again.", variant: "destructive" });
         setLoading(false);
