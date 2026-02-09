@@ -140,21 +140,10 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background px-6 pt-8 pb-16">
-      {/* Header with secret tap */}
-      <button
-        type="button"
-        onClick={handleLogoTap}
-        className="text-center mb-2 focus:outline-none select-none cursor-pointer"
-        style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
-      >
-        <h1 className="text-3xl font-bold tracking-wide pointer-events-none">riehls</h1>
-      </button>
-      <p className="text-muted-foreground text-sm mb-6">finally, a curated feed</p>
-
-      <div className="flex-1 flex flex-col items-center justify-center -mt-16">
-        {showAdminLogin ? (
-          // Admin login form
+    <div className="min-h-screen flex flex-col bg-background">
+      {showAdminLogin ? (
+        // Admin login form - centered
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
           <div className="w-full max-w-xs space-y-6">
             <div className="text-center">
               <h2 className="text-xl font-semibold">Admin Login</h2>
@@ -198,20 +187,34 @@ export default function Onboarding() {
               Back to profile setup
             </button>
           </div>
-        ) : (
-          // Regular onboarding form
-          <div className="w-full max-w-xs space-y-6">
+        </div>
+      ) : (
+        // Landing page style onboarding
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+          {/* Hero: Logo and tagline */}
+          <button
+            type="button"
+            onClick={handleLogoTap}
+            className="text-center mb-10 focus:outline-none select-none cursor-pointer"
+            style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
+          >
+            <h1 className="text-5xl font-bold tracking-tight pointer-events-none mb-2">riehls</h1>
+            <p className="text-muted-foreground text-base pointer-events-none">finally, a curated feed</p>
+          </button>
+
+          {/* Profile setup form */}
+          <div className="w-full max-w-xs space-y-5">
             {/* Avatar upload */}
-            <div className="flex flex-col items-center space-y-3">
+            <div className="flex flex-col items-center space-y-2">
               <label className="relative cursor-pointer">
                 <div className={cn(
-                  "w-24 h-24 rounded-full flex items-center justify-center overflow-hidden",
-                  avatarPreview ? "" : "bg-secondary border-2 border-dashed border-muted-foreground"
+                  "w-20 h-20 rounded-full flex items-center justify-center overflow-hidden",
+                  avatarPreview ? "" : "bg-secondary border-2 border-dashed border-muted-foreground/50"
                 )}>
                   {avatarPreview ? (
                     <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
                   ) : (
-                    <Camera className="w-8 h-8 text-muted-foreground" />
+                    <Camera className="w-6 h-6 text-muted-foreground" />
                   )}
                 </div>
                 <input
@@ -231,23 +234,21 @@ export default function Onboarding() {
             </div>
 
             {/* Name input */}
-            <div className="space-y-2">
-              <Input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name"
-                className="text-center bg-secondary"
-                maxLength={50}
-              />
-            </div>
+            <Input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Your name"
+              className="text-center bg-secondary/50 border-border/50 h-12"
+              maxLength={50}
+            />
 
             {/* Bio input */}
             <div className="space-y-1">
               <Textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Short bio (optional)"
-                className="resize-none bg-secondary text-center"
+                placeholder="Bio (optional)"
+                className="resize-none bg-secondary/50 border-border/50 text-center min-h-0"
                 rows={2}
                 maxLength={80}
               />
@@ -255,22 +256,18 @@ export default function Onboarding() {
                 {bio.length}/80
               </p>
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* Bottom button - only show for regular onboarding */}
-      {!showAdminLogin && (
-        <div className="flex justify-center mt-6">
-          <Button
-            onClick={handleCreateProfile}
-            disabled={!displayName.trim() || loading}
-            className="w-4/5 max-w-xs"
-            size="lg"
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {loading ? 'Creating...' : 'Create profile'}
-          </Button>
+            {/* Create button */}
+            <Button
+              onClick={handleCreateProfile}
+              disabled={!displayName.trim() || loading}
+              className="w-full h-12"
+              size="lg"
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading ? 'Creating...' : 'Create profile'}
+            </Button>
+          </div>
         </div>
       )}
     </div>
