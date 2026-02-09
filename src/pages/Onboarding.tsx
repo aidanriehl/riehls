@@ -269,7 +269,7 @@ export default function Onboarding() {
             <Button
               onClick={handleCreateProfile}
               disabled={!displayName.trim() || loading}
-              className="w-full h-12"
+              className="w-full h-12 bg-primary hover:bg-primary/90"
               size="lg"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
