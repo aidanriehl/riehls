@@ -148,12 +148,10 @@ export default function Onboarding() {
         alt="" 
         className="absolute inset-0 w-full h-full object-cover object-[center_30%] z-0"
       />
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/60 z-10" />
       
       {showAdminLogin ? (
         // Admin login form - centered
-        <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-20">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
           <div className="w-full max-w-xs space-y-6">
             <div className="text-center">
               <h2 className="text-xl font-semibold">Admin Login</h2>
@@ -200,7 +198,7 @@ export default function Onboarding() {
         </div>
       ) : (
         // Landing page style onboarding
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative z-20">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative z-10">
           {/* Hero: Logo and tagline */}
           <button
             type="button"
