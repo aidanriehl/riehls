@@ -145,9 +145,10 @@ export default function Onboarding() {
       <button
         type="button"
         onClick={handleLogoTap}
-        className="text-center mb-8 focus:outline-none select-none"
+        className="text-center mb-8 focus:outline-none select-none cursor-pointer"
+        style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
       >
-        <h1 className="text-3xl font-bold tracking-wide">riehls</h1>
+        <h1 className="text-3xl font-bold tracking-wide pointer-events-none">riehls</h1>
       </button>
 
       <div className="flex-1 flex flex-col items-center justify-center -mt-16">

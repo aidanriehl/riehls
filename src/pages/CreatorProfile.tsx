@@ -19,6 +19,7 @@ const CreatorProfile = () => {
   const { profile: adminProfile, loading: profileLoading } = useProfile();
   const { isAdmin } = useAuth();
   const [videos, setVideos] = useState<CreatorVideo[]>([]);
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
   const [creatorProfile, setCreatorProfile] = useState<{
     displayName: string;
     avatarUrl: string;
@@ -29,18 +30,20 @@ const CreatorProfile = () => {
   useEffect(() => {
     const fetchCreatorData = async () => {
       // Use security definer function to get admin user ID (bypasses RLS)
-      const { data: adminUserId } = await supabase.rpc('get_admin_user_id');
+      const { data: fetchedAdminUserId } = await supabase.rpc('get_admin_user_id');
       
-      if (!adminUserId) {
+      if (!fetchedAdminUserId) {
         setLoading(false);
         return;
       }
+
+      setAdminUserId(fetchedAdminUserId);
 
       // Fetch admin's profile
       const { data: profileData } = await supabase
         .from('profiles')
         .select('display_name, avatar_url, bio')
-        .eq('id', adminUserId)
+        .eq('id', fetchedAdminUserId)
         .maybeSingle();
 
       if (profileData) {
@@ -55,7 +58,7 @@ const CreatorProfile = () => {
       const { data: videosData } = await supabase
         .from('videos')
         .select('id, thumbnail_url')
-        .eq('creator_id', adminUserId)
+        .eq('creator_id', fetchedAdminUserId)
         .eq('is_published', true)
         .order('created_at', { ascending: false });
 
@@ -155,7 +158,7 @@ const CreatorProfile = () => {
           <Button 
             variant="secondary" 
             className="flex-1"
-            onClick={() => navigate('/messages')}
+            onClick={() => navigate('/messages', { state: { recipientId: adminUserId } })}
           >
             Message
           </Button>

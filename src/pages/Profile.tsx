@@ -219,12 +219,12 @@ const Profile = () => {
                   <div className="text-sm text-muted-foreground">liked</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-semibold">802</div>
-                  <div className="text-sm text-muted-foreground">credit score</div>
+                  <div className="font-semibold">100</div>
+                  <div className="text-sm text-muted-foreground">friendship strength</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-semibold">225</div>
-                  <div className="text-sm text-muted-foreground">bench press</div>
+                  <div className="font-semibold">1</div>
+                  <div className="text-sm text-muted-foreground">following</div>
                 </div>
               </>
             )}
