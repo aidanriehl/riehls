@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Send, Heart, Reply, X } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { ArrowLeft, Send, Heart } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +33,7 @@ interface MessageChatProps {
 
 export function MessageChat({ partnerId: propPartnerId }: MessageChatProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { oderId } = useParams<{ oderId: string }>();
   const { user, isAdmin } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -47,8 +48,11 @@ export function MessageChat({ partnerId: propPartnerId }: MessageChatProps) {
   const touchStartY = useRef<number>(0);
   const lastTapTime = useRef<{ [key: string]: number }>({});
 
-  // Determine the chat partner ID
-  const partnerId = propPartnerId || oderId;
+  // Check for recipientId passed via location state (from CreatorProfile Message button)
+  const stateRecipientId = (location.state as { recipientId?: string })?.recipientId;
+  
+  // Determine the chat partner ID - prioritize state, then props, then URL params
+  const partnerId = stateRecipientId || propPartnerId || oderId;
 
   // Fetch admin ID for regular users
   useEffect(() => {
