@@ -43,7 +43,7 @@ export const ProtectedRoute = forwardRef<HTMLDivElement, ProtectedRouteProps>(
     }
 
     // Check navigation state to bypass stale profile data after onboarding completion
-    const justCompletedOnboarding = location.state?.onboardingJustCompleted;
+    const justCompletedOnboarding = location.state?.onboardingJustCompleted || localStorage.getItem('onboardingJustCompleted') === 'true';
     
     // Redirect to onboarding if not complete (for non-admin users)
     if (requireOnboarding && profile && !profile.onboarding_complete && !justCompletedOnboarding) {
