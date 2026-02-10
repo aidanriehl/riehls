@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -119,10 +120,10 @@ export function NotificationsList() {
         >
           {/* Avatar with icon badge */}
           <div className="relative flex-shrink-0">
-            <img
-              src={notification.actorAvatar}
-              alt={notification.actorName}
-              className="w-11 h-11 rounded-full object-cover"
+            <UserAvatar
+              src={notification.actorAvatar === '/placeholder.svg' ? null : notification.actorAvatar}
+              name={notification.actorName}
+              className="w-11 h-11"
             />
             <div
               className={cn(

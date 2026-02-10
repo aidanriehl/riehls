@@ -3,6 +3,7 @@ import { Send } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
@@ -130,10 +131,10 @@ export function CommentsSheet({ videoId, isOpen, onClose, onCommentCountChange }
           ) : (
             comments.map((comment) => (
               <div key={comment.id} className="flex gap-3">
-                <img
-                  src={comment.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop'}
-                  alt={comment.display_name || comment.username || 'User'}
-                  className="w-9 h-9 rounded-full flex-shrink-0 object-cover"
+                <UserAvatar
+                  src={comment.avatar_url}
+                  name={comment.display_name || comment.username}
+                  className="w-9 h-9 flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

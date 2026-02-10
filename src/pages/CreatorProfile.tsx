@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Grid3X3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UnfollowDialog } from '@/components/UnfollowDialog';
+import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
@@ -116,10 +117,10 @@ const CreatorProfile = () => {
       <div className="px-4 py-6">
         {/* Avatar and Stats Row */}
         <div className="flex items-center gap-8">
-          <img
-            src={creatorProfile?.avatarUrl || '/placeholder.svg'}
-            alt={creatorProfile?.displayName}
-            className="w-20 h-20 rounded-full object-cover"
+          <UserAvatar
+            src={creatorProfile?.avatarUrl === '/placeholder.svg' ? null : creatorProfile?.avatarUrl}
+            name={creatorProfile?.displayName}
+            className="w-20 h-20"
           />
 
           <div className="flex flex-1 justify-around">
