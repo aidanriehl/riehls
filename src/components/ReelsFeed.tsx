@@ -9,8 +9,9 @@ export function ReelsFeed() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const startVideoId = searchParams.get('video');
-  const fromCreatorProfile = location.state?.fromCreatorProfile === true;
-  const fromProfile = location.state?.fromProfile === true;
+  // Save navigation state to refs before setSearchParams clears it
+  const fromCreatorProfileRef = useRef(location.state?.fromCreatorProfile === true);
+  const fromProfileRef = useRef(location.state?.fromProfile === true);
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScrolledToVideo = useRef(false);
@@ -79,8 +80,8 @@ export function ReelsFeed() {
           onLike={() => toggleLike(video.id)}
           onSave={() => toggleSave(video.id)}
           onDelete={() => deleteVideo(video.id)}
-          showBackButton={(fromCreatorProfile || fromProfile) && index === activeIndex}
-          backDestination={fromProfile ? '/profile' : '/creator'}
+          showBackButton={(fromCreatorProfileRef.current || fromProfileRef.current) && index === activeIndex}
+          backDestination={fromProfileRef.current ? '/profile' : '/creator'}
         />
       ))}
     </div>

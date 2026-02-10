@@ -27,6 +27,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBac
   const [showShare, setShowShare] = useState(false);
   const [doubleTapHeart, setDoubleTapHeart] = useState(false);
   const [isSpeedUp, setIsSpeedUp] = useState(false);
+  const [dynamicCommentCount, setDynamicCommentCount] = useState<number | null>(null);
   const lastTapRef = useRef<number>(0);
   const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -223,7 +224,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBac
       {/* Actions sidebar */}
       <div className="absolute right-3 bottom-28 z-20">
         <VideoActions
-          video={video}
+          video={dynamicCommentCount !== null ? { ...video, commentCount: dynamicCommentCount } : video}
           onLike={onLike}
           onComment={() => setShowComments(true)}
           onSave={onSave}
@@ -246,6 +247,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBac
         videoId={video.id}
         isOpen={showComments}
         onClose={() => setShowComments(false)}
+        onCommentCountChange={setDynamicCommentCount}
       />
 
       {/* Share sheet */}

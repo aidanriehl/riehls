@@ -104,6 +104,9 @@ export default function Onboarding() {
       }
       
       await refetch();
+      // Set localStorage flag so ProtectedRoute doesn't redirect back
+      localStorage.setItem('onboardingJustCompleted', 'true');
+      setTimeout(() => localStorage.removeItem('onboardingJustCompleted'), 10000);
       navigate('/', { replace: true, state: { onboardingJustCompleted: true } });
     } catch (err) {
       toast({ title: "Failed to save", description: "Please try again.", variant: "destructive" });

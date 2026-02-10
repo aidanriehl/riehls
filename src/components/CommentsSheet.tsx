@@ -1,16 +1,27 @@
-import { useState, useMemo } from 'react';
-import { Heart, Send } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Send } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { mockComments } from '@/data/mockData';
-import { Comment } from '@/types';
-import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
+
+interface CommentData {
+  id: string;
+  text: string;
+  created_at: string;
+  user_id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+}
 
 interface CommentsSheetProps {
   videoId: string;
   isOpen: boolean;
   onClose: () => void;
+  onCommentCountChange?: (count: number) => void;
 }
 
 function formatTimeAgo(dateString: string): string {
@@ -25,66 +36,74 @@ function formatTimeAgo(dateString: string): string {
   return `${Math.floor(seconds / 604800)}w`;
 }
 
-// Generate a consistent emoji based on video ID
-function getFirstCommentEmoji(videoId: string): string {
-  const emojis = ['🔥', '💯', '🕴️', '🤭'];
-  const hash = Math.abs(videoId.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0));
-  return emojis[hash % emojis.length];
-}
-
-export function CommentsSheet({ videoId, isOpen, onClose }: CommentsSheetProps) {
-  // Create the fake first comment
-  const fakeFirstComment: Comment = useMemo(() => ({
-    id: `fake-first-${videoId}`,
-    videoId,
-    userId: 'aidans-friend',
-    username: 'aidans_friend',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop',
-    text: `first comment! ${getFirstCommentEmoji(videoId)}`,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
-    likeCount: 12,
-    isLiked: false,
-  }), [videoId]);
-
-  const [comments, setComments] = useState<Comment[]>(() => {
-    const realComments = mockComments.filter((c) => c.videoId === videoId);
-    // Add fake first comment at the end (so it appears as oldest/first)
-    return [...realComments, fakeFirstComment];
-  });
+export function CommentsSheet({ videoId, isOpen, onClose, onCommentCountChange }: CommentsSheetProps) {
+  const { profile } = useProfile();
+  const { user } = useAuth();
+  const [comments, setComments] = useState<CommentData[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
+  // Fetch comments from database
+  useEffect(() => {
+    if (!isOpen) return;
 
-    const comment: Comment = {
-      id: `c${Date.now()}`,
-      videoId,
-      userId: 'current-user',
-      username: 'you',
-      avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop',
-      text: newComment,
-      createdAt: new Date().toISOString(),
-      likeCount: 0,
-      isLiked: false,
+    const fetchComments = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('comments')
+        .select('id, text, created_at, user_id, profiles:user_id(username, display_name, avatar_url)')
+        .eq('video_id', videoId)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        const mapped = data.map((c: any) => ({
+          id: c.id,
+          text: c.text,
+          created_at: c.created_at,
+          user_id: c.user_id,
+          username: c.profiles?.username ?? null,
+          display_name: c.profiles?.display_name ?? null,
+          avatar_url: c.profiles?.avatar_url ?? null,
+        }));
+        setComments(mapped);
+        onCommentCountChange?.(mapped.length);
+      }
+      setLoading(false);
     };
 
-    setComments([comment, ...comments]);
-    setNewComment('');
-  };
+    fetchComments();
+  }, [isOpen, videoId]);
 
-  const toggleCommentLike = (commentId: string) => {
-    setComments((prev) =>
-      prev.map((c) =>
-        c.id === commentId
-          ? {
-              ...c,
-              isLiked: !c.isLiked,
-              likeCount: c.isLiked ? c.likeCount - 1 : c.likeCount + 1,
-            }
-          : c
-      )
-    );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user) return;
+
+    // Optimistic add
+    const optimistic: CommentData = {
+      id: `temp-${Date.now()}`,
+      text: newComment,
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+      username: profile?.username ?? null,
+      display_name: profile?.display_name ?? null,
+      avatar_url: profile?.avatar_url ?? null,
+    };
+
+    const updatedComments = [optimistic, ...comments];
+    setComments(updatedComments);
+    onCommentCountChange?.(updatedComments.length);
+    setNewComment('');
+
+    // Persist
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({ text: newComment, user_id: user.id, video_id: videoId })
+      .select('id')
+      .single();
+
+    if (!error && data) {
+      setComments(prev => prev.map(c => c.id === optimistic.id ? { ...c, id: data.id } : c));
+    }
   };
 
   return (
@@ -101,7 +120,9 @@ export function CommentsSheet({ videoId, isOpen, onClose }: CommentsSheetProps) 
 
         {/* Comments list */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 max-h-[calc(70vh-140px)]">
-          {comments.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground">Loading...</div>
+          ) : comments.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <p>No comments yet</p>
               <p className="text-sm mt-1">Be the first to comment!</p>
@@ -110,30 +131,20 @@ export function CommentsSheet({ videoId, isOpen, onClose }: CommentsSheetProps) 
             comments.map((comment) => (
               <div key={comment.id} className="flex gap-3">
                 <img
-                  src={comment.avatarUrl}
-                  alt={comment.username}
-                  className="w-9 h-9 rounded-full flex-shrink-0"
+                  src={comment.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop'}
+                  alt={comment.display_name || comment.username || 'User'}
+                  className="w-9 h-9 rounded-full flex-shrink-0 object-cover"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">{comment.username}</span>
+                    <span className="font-semibold text-sm">
+                      {comment.display_name || comment.username || 'User'}
+                    </span>
                     <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(comment.createdAt)}
+                      {formatTimeAgo(comment.created_at)}
                     </span>
                   </div>
                   <p className="text-sm mt-0.5">{comment.text}</p>
-                  <button
-                    onClick={() => toggleCommentLike(comment.id)}
-                    className="flex items-center gap-1 mt-1 text-xs text-muted-foreground"
-                  >
-                    <Heart
-                      className={cn(
-                        'w-3.5 h-3.5',
-                        comment.isLiked && 'fill-like text-like'
-                      )}
-                    />
-                    {comment.likeCount > 0 && <span>{comment.likeCount}</span>}
-                  </button>
                 </div>
               </div>
             ))
@@ -155,7 +166,7 @@ export function CommentsSheet({ videoId, isOpen, onClose }: CommentsSheetProps) 
             <Button 
               type="submit" 
               size="icon" 
-              disabled={!newComment.trim()}
+              disabled={!newComment.trim() || !user}
               className="bg-primary hover:bg-primary/90"
             >
               <Send className="w-4 h-4" />
