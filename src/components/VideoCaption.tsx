@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import { UserAvatar } from '@/components/UserAvatar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +40,6 @@ export function VideoCaption({ caption, createdAt, creator, onDelete }: VideoCap
     : displayCaption.slice(0, maxLength) + '...';
 
   const displayName = creator?.displayName || creator?.username || 'Creator';
-  const avatarUrl = creator?.avatarUrl || '/placeholder.svg';
 
   // Format date as "Jan 15"
   const formattedDate = format(new Date(createdAt), 'MMM d');
@@ -52,10 +52,10 @@ export function VideoCaption({ caption, createdAt, creator, onDelete }: VideoCap
           onClick={() => navigate('/creator')}
           className="flex-shrink-0"
         >
-          <img
-            src={avatarUrl}
-            alt={displayName}
-            className="w-8 h-8 rounded-lg object-cover"
+          <UserAvatar
+            src={creator?.avatarUrl}
+            name={displayName}
+            className="w-8 h-8 rounded-lg"
           />
         </button>
         <button 

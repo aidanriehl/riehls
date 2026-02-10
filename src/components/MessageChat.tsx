@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Send, Heart } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -303,10 +303,11 @@ export function MessageChat({ partnerId: propPartnerId }: MessageChatProps) {
           onClick={() => navigate('/creator')}
           className="flex items-center gap-3"
         >
-          <Avatar className="w-10 h-10">
-            <AvatarImage src={chatPartner?.avatarUrl || '/placeholder.svg'} />
-            <AvatarFallback>{chatPartner?.displayName?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            src={chatPartner?.avatarUrl === '/placeholder.svg' ? null : chatPartner?.avatarUrl}
+            name={chatPartner?.displayName}
+            className="w-10 h-10"
+          />
           <span className="font-semibold">{chatPartner?.displayName || 'User'}</span>
         </button>
       </header>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -164,12 +164,11 @@ export function MessageInbox() {
               onClick={() => navigate(`/messages/${conversation.oderId}`)}
               className="w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors text-left"
             >
-              <Avatar className="w-14 h-14">
-                <AvatarImage src={conversation.avatarUrl} />
-                <AvatarFallback>
-                  {conversation.displayName[0]?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                src={conversation.avatarUrl === '/placeholder.svg' ? null : conversation.avatarUrl}
+                name={conversation.displayName}
+                className="w-14 h-14"
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">{conversation.displayName}</span>

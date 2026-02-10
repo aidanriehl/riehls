@@ -4,6 +4,7 @@ import { Settings, Heart, Grid3X3, MessageCircle, ArrowLeft, Camera } from 'luci
 import { BottomNav } from '@/components/BottomNav';
 import { NotificationsList } from '@/components/NotificationsList';
 import { ProfileSettingsSheet } from '@/components/ProfileSettingsSheet';
+import { UserAvatar } from '@/components/UserAvatar';
 import { useVideos } from '@/hooks/useVideos';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -170,11 +171,11 @@ const Profile = () => {
             disabled={avatarUploading}
             className="relative group"
           >
-            <img
-              src={avatarUrl}
-              alt={displayName}
+            <UserAvatar
+              src={avatarUrl === '/placeholder.svg' ? null : avatarUrl}
+              name={displayName}
               className={cn(
-                "w-20 h-20 rounded-full object-cover transition-opacity",
+                "w-20 h-20 transition-opacity",
                 avatarUploading && "opacity-50"
               )}
             />
