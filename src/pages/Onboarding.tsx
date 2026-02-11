@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import OneSignal from 'react-onesignal';
 import { Camera, Loader2 } from 'lucide-react';
 import onboardingBg from '@/assets/onboarding-bg.jpg';
 import { Button } from '@/components/ui/button';
@@ -107,6 +108,14 @@ export default function Onboarding() {
       // Set localStorage flag so ProtectedRoute doesn't redirect back
       localStorage.setItem('onboardingJustCompleted', 'true');
       setTimeout(() => localStorage.removeItem('onboardingJustCompleted'), 10000);
+      
+      // Prompt for push notifications after onboarding
+      try {
+        await OneSignal.Slidedown.promptPush();
+      } catch (e) {
+        // User may dismiss or notifications not supported
+      }
+      
       navigate('/', { replace: true, state: { onboardingJustCompleted: true } });
     } catch (err) {
       toast({ title: "Failed to save", description: "Please try again.", variant: "destructive" });

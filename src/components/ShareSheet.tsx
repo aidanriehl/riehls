@@ -12,9 +12,10 @@ interface ShareSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   videoCaption: string;
+  videoId?: string;
 }
 
-export function ShareSheet({ open, onOpenChange, videoCaption }: ShareSheetProps) {
+export function ShareSheet({ open, onOpenChange, videoCaption, videoId }: ShareSheetProps) {
   const navigate = useNavigate();
 
   const handleCopyLink = async () => {
@@ -39,7 +40,7 @@ export function ShareSheet({ open, onOpenChange, videoCaption }: ShareSheetProps
 
   const handleDM = () => {
     onOpenChange(false);
-    navigate('/messages');
+    navigate('/messages', { state: { attachedVideoId: videoId } });
   };
 
   const shareOptions = [

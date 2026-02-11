@@ -12,8 +12,9 @@ import Messages from "./pages/Messages";
 import MessageConversation from "./pages/MessageConversation";
  import Auth from "./pages/Auth";
  import Onboarding from "./pages/Onboarding";
- import AdminUpload from "./pages/AdminUpload";
- import NotFound from "./pages/NotFound";
+import Following from "./pages/Following";
+import AdminUpload from "./pages/AdminUpload";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -56,7 +57,12 @@ const App = () => (
                   <MessageConversation />
                 </ProtectedRoute>
               } />
-             <Route path="/admin/upload" element={
+              <Route path="/following" element={
+                <ProtectedRoute>
+                  <Following />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/upload" element={
                <ProtectedRoute requireAdmin>
                  <AdminUpload />
                </ProtectedRoute>

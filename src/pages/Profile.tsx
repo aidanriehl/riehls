@@ -140,6 +140,15 @@ const Profile = () => {
     }
   };
 
+  // Show loading state until profile data arrives
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   const displayName = profile?.display_name || 'User';
   const avatarUrl = profile?.avatar_url || '/placeholder.svg';
   const bio = profile?.bio || '';
@@ -223,10 +232,10 @@ const Profile = () => {
                   <div className="font-semibold">100</div>
                   <div className="text-sm text-muted-foreground">friendship strength</div>
                 </div>
-                <div className="text-center">
+                <button onClick={() => navigate('/following')} className="text-center">
                   <div className="font-semibold">1</div>
                   <div className="text-sm text-muted-foreground">following</div>
-                </div>
+                </button>
               </>
             )}
           </div>

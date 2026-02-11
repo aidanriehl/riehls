@@ -25,16 +25,12 @@ interface CommentsSheetProps {
   onCommentCountChange?: (count: number) => void;
 }
 
-function formatTimeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d`;
-  return `${Math.floor(seconds / 604800)}w`;
+const FAKE_EMOJIS = ['💯', '🤭', '🙈', '🕴️', '🧎‍♂️'];
+let fakeEmojiIndex = 0;
+function getNextFakeEmoji(): string {
+  const emoji = FAKE_EMOJIS[fakeEmojiIndex % FAKE_EMOJIS.length];
+  fakeEmojiIndex++;
+  return emoji;
 }
 
 export function CommentsSheet({ videoId, isOpen, onClose, onCommentCountChange }: CommentsSheetProps) {
@@ -43,6 +39,14 @@ export function CommentsSheet({ videoId, isOpen, onClose, onCommentCountChange }
   const [comments, setComments] = useState<CommentData[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fakeEmoji, setFakeEmoji] = useState('💯');
+
+  // Pick next emoji each time sheet opens
+  useEffect(() => {
+    if (isOpen) {
+      setFakeEmoji(getNextFakeEmoji());
+    }
+  }, [isOpen]);
 
   // Fetch comments from database
   useEffect(() => {
@@ -67,7 +71,7 @@ export function CommentsSheet({ videoId, isOpen, onClose, onCommentCountChange }
           avatar_url: c.profiles?.avatar_url ?? null,
         }));
         setComments(mapped);
-        onCommentCountChange?.(mapped.length);
+        onCommentCountChange?.(mapped.length + 1); // +1 for fake comment
       }
       setLoading(false);
     };
@@ -92,7 +96,7 @@ export function CommentsSheet({ videoId, isOpen, onClose, onCommentCountChange }
 
     const updatedComments = [optimistic, ...comments];
     setComments(updatedComments);
-    onCommentCountChange?.(updatedComments.length);
+    onCommentCountChange?.(updatedComments.length + 1); // +1 for fake comment
     setNewComment('');
 
     // Persist
@@ -115,7 +119,7 @@ export function CommentsSheet({ videoId, isOpen, onClose, onCommentCountChange }
       >
         <SheetHeader className="px-4 pb-4 border-b border-border">
           <SheetTitle className="text-lg font-semibold text-center">
-            {comments.length} comments
+            {comments.length + 1} comments
           </SheetTitle>
         </SheetHeader>
 
@@ -129,26 +133,35 @@ export function CommentsSheet({ videoId, isOpen, onClose, onCommentCountChange }
               <p className="text-sm mt-1">Be the first to comment!</p>
             </div>
           ) : (
-            comments.map((comment) => (
-              <div key={comment.id} className="flex gap-3">
-                <UserAvatar
-                  src={comment.avatar_url}
-                  name={comment.display_name || comment.username}
-                  className="w-9 h-9 flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+            <>
+              {comments.map((comment) => (
+                <div key={comment.id} className="flex gap-3">
+                  <UserAvatar
+                    src={comment.avatar_url}
+                    name={comment.display_name || comment.username}
+                    className="w-9 h-9 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
                     <span className="font-semibold text-sm">
                       {comment.display_name || comment.username || 'User'}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(comment.created_at)}
-                    </span>
+                    <p className="text-sm mt-0.5">{comment.text}</p>
                   </div>
-                  <p className="text-sm mt-0.5">{comment.text}</p>
+                </div>
+              ))}
+              {/* Fake social proof comment */}
+              <div className="flex gap-3">
+                <UserAvatar
+                  src={null}
+                  name="aidans_fanbot"
+                  className="w-9 h-9 flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-sm">aidans_fanbot</span>
+                  <p className="text-sm mt-0.5">first comment! {fakeEmoji}</p>
                 </div>
               </div>
-            ))
+            </>
           )}
         </div>
 
