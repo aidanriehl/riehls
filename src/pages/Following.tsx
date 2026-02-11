@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Button } from '@/components/ui/button';
+import { UnfollowDialog } from '@/components/UnfollowDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Creator {
   id: string;
-  username: string | null;
   display_name: string | null;
   avatar_url: string | null;
 }
@@ -16,6 +16,7 @@ const Following = () => {
   const navigate = useNavigate();
   const [creator, setCreator] = useState<Creator | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showUnfollow, setShowUnfollow] = useState(false);
 
   useEffect(() => {
     const fetchCreator = async () => {
@@ -23,7 +24,7 @@ const Following = () => {
       if (adminId) {
         const { data } = await supabase
           .from('profiles')
-          .select('id, username, display_name, avatar_url')
+          .select('id, display_name, avatar_url')
           .eq('id', adminId)
           .maybeSingle();
         if (data) setCreator(data);
@@ -56,31 +57,34 @@ const Following = () => {
           >
             <UserAvatar
               src={creator.avatar_url}
-              name={creator.display_name || creator.username}
+              name={creator.display_name}
               className="w-12 h-12"
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1">
                 <span className="font-semibold text-sm truncate">
-                  {creator.username || 'aidan'}
+                  {creator.display_name || 'Aidan Riehl'}
                 </span>
                 <span className="text-xs text-primary">✓</span>
               </div>
-              <span className="text-sm text-muted-foreground truncate block">
-                {creator.display_name || 'Aidan Riehl'}
-              </span>
             </div>
 
             <Button
               variant="outline"
               size="sm"
               className="rounded-lg text-sm font-semibold"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowUnfollow(true);
+              }}
             >
               Following
             </Button>
           </div>
         ) : null}
       </div>
+
+      <UnfollowDialog open={showUnfollow} onOpenChange={setShowUnfollow} />
     </div>
   );
 };
