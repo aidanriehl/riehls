@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Send, Heart } from 'lucide-react';
+import { ArrowLeft, Send, Heart, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,7 +28,27 @@ const SUGGESTIONS = [
 ];
 
 interface MessageChatProps {
-  partnerId?: string; // For when admin opens a specific conversation
+  partnerId?: string;
+}
+
+// Small component to lazily load a video thumbnail
+function VideoThumbnail({ videoId }: { videoId: string }) {
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  useEffect(() => {
+    supabase
+      .from('videos')
+      .select('thumbnail_url')
+      .eq('id', videoId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setThumbUrl(data.thumbnail_url);
+      });
+  }, [videoId]);
+  return thumbUrl ? (
+    <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+  ) : (
+    <div className="w-full h-full bg-muted animate-pulse" />
+  );
 }
 
 export function MessageChat({ partnerId: propPartnerId }: MessageChatProps) {
@@ -48,11 +68,30 @@ export function MessageChat({ partnerId: propPartnerId }: MessageChatProps) {
   const touchStartY = useRef<number>(0);
   const lastTapTime = useRef<{ [key: string]: number }>({});
 
-  // Check for recipientId passed via location state (from CreatorProfile Message button)
+  // Check for recipientId and attachedVideoId passed via location state
   const stateRecipientId = (location.state as { recipientId?: string })?.recipientId;
+  const stateAttachedVideoId = (location.state as { attachedVideoId?: string })?.attachedVideoId;
   
+  const [attachedVideo, setAttachedVideo] = useState<{ id: string; thumbnailUrl: string | null } | null>(null);
+
   // Determine the chat partner ID - prioritize state, then props, then URL params
   const partnerId = stateRecipientId || propPartnerId || oderId;
+
+  // Load attached video thumbnail
+  useEffect(() => {
+    if (!stateAttachedVideoId) return;
+    const fetchVideo = async () => {
+      const { data } = await supabase
+        .from('videos')
+        .select('id, thumbnail_url')
+        .eq('id', stateAttachedVideoId)
+        .maybeSingle();
+      if (data) {
+        setAttachedVideo({ id: data.id, thumbnailUrl: data.thumbnail_url });
+      }
+    };
+    fetchVideo();
+  }, [stateAttachedVideoId]);
 
   // Fetch admin ID for regular users
   useEffect(() => {
@@ -184,9 +223,19 @@ export function MessageChat({ partnerId: propPartnerId }: MessageChatProps) {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!newMessage.trim() || !user || !chatPartner) return;
+    if ((!newMessage.trim() && !attachedVideo) || !user || !chatPartner) return;
 
-    const content = newMessage.trim();
+    let content = newMessage.trim();
+    
+    // If there's an attached video, prepend a video reference
+    if (attachedVideo) {
+      const videoRef = `[video:${attachedVideo.id}]`;
+      content = content ? `${videoRef} ${content}` : videoRef;
+      setAttachedVideo(null);
+    }
+    
+    if (!content) return;
+    
     setNewMessage('');
 
     // Optimistic update
@@ -318,6 +367,11 @@ export function MessageChat({ partnerId: propPartnerId }: MessageChatProps) {
           const isSwipingThis = swipeState?.id === message.id;
           const swipeOffset = isSwipingThis ? swipeState.offset : 0;
           
+          // Check if message contains a video reference
+          const videoMatch = message.content.match(/\[video:([^\]]+)\]/);
+          const videoId = videoMatch ? videoMatch[1] : null;
+          const textContent = message.content.replace(/\[video:[^\]]+\]\s?/, '').trim();
+
           return (
             <div
               key={message.id}
@@ -335,13 +389,22 @@ export function MessageChat({ partnerId: propPartnerId }: MessageChatProps) {
                 onClick={() => handleDoubleTap(message.id)}
               >
                 <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+                  className={`max-w-[75%] rounded-2xl overflow-hidden ${
                     message.isFromMe
                       ? 'bg-[hsl(var(--dm-sent))] text-[hsl(var(--dm-sent-foreground))]'
                       : 'bg-muted text-foreground'
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  {videoId && (
+                    <div 
+                      className="w-48 h-28 bg-muted cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/?video=${videoId}`); }}
+                    >
+                      <VideoThumbnail videoId={videoId} />
+                    </div>
+                  )}
+                  {textContent && <p className="text-sm px-4 py-2">{textContent}</p>}
+                  {!textContent && !videoId && <p className="text-sm px-4 py-2">{message.content}</p>}
                 </div>
                 
                 {message.isLiked && (
@@ -376,6 +439,25 @@ export function MessageChat({ partnerId: propPartnerId }: MessageChatProps) {
                 {suggestion}
               </button>
             ))}
+          </div>
+        )}
+        
+        {/* Attached video preview */}
+        {attachedVideo && (
+          <div className="px-4 pt-3">
+            <div className="relative inline-block rounded-lg overflow-hidden border border-border">
+              <img
+                src={attachedVideo.thumbnailUrl || '/placeholder.svg'}
+                alt="Attached video"
+                className="w-20 h-14 object-cover"
+              />
+              <button
+                onClick={() => setAttachedVideo(null)}
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-background/80 flex items-center justify-center"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         )}
         

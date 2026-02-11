@@ -224,7 +224,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBac
       {/* Actions sidebar */}
       <div className="absolute right-3 bottom-28 z-20">
         <VideoActions
-          video={dynamicCommentCount !== null ? { ...video, commentCount: dynamicCommentCount } : video}
+          video={dynamicCommentCount !== null ? { ...video, commentCount: dynamicCommentCount } : { ...video, commentCount: video.commentCount + 1 }}
           onLike={onLike}
           onComment={() => setShowComments(true)}
           onSave={onSave}
@@ -255,6 +255,7 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBac
         open={showShare}
         onOpenChange={setShowShare}
         videoCaption={video.caption}
+        videoId={video.id}
       />
     </div>
   );

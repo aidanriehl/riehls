@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
 import {
@@ -41,8 +40,6 @@ export function VideoCaption({ caption, createdAt, creator, onDelete }: VideoCap
 
   const displayName = creator?.displayName || creator?.username || 'Creator';
 
-  // Format date as "Jan 15"
-  const formattedDate = format(new Date(createdAt), 'MMM d');
 
   return (
     <div className="max-w-[85%]">
@@ -81,9 +78,8 @@ export function VideoCaption({ caption, createdAt, creator, onDelete }: VideoCap
         </p>
       )}
 
-      {/* Post date + Admin delete */}
+      {/* Admin delete */}
       <div className="flex items-center gap-4 mt-1.5">
-        <p className="text-xs text-muted-foreground whitespace-nowrap">{formattedDate}</p>
         {isAdmin && onDelete && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
