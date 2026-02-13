@@ -8,6 +8,7 @@ export interface Video {
   createdAt: string;
   isLiked: boolean;
   isSaved: boolean;
+  isPinned?: boolean;
   creator?: {
     id: string;
     displayName: string | null;

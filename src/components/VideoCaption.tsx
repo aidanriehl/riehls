@@ -24,9 +24,11 @@ interface VideoCaptionProps {
     username: string | null;
   } | null;
   onDelete?: () => void;
+  isPinned?: boolean;
+  onPin?: () => void;
 }
 
-export function VideoCaption({ caption, createdAt, creator, onDelete }: VideoCaptionProps) {
+export function VideoCaption({ caption, createdAt, creator, onDelete, isPinned, onPin }: VideoCaptionProps) {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [expanded, setExpanded] = useState(false);
@@ -78,8 +80,16 @@ export function VideoCaption({ caption, createdAt, creator, onDelete }: VideoCap
         </p>
       )}
 
-      {/* Admin delete */}
+      {/* Admin actions */}
       <div className="flex items-center gap-4 mt-1.5">
+        {isAdmin && onPin && (
+          <button 
+            onClick={onPin}
+            className="text-xs font-medium text-blue-500"
+          >
+            {isPinned ? 'Unpin' : 'Pin'}
+          </button>
+        )}
         {isAdmin && onDelete && (
           <AlertDialog>
             <AlertDialogTrigger asChild>

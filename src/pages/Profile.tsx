@@ -23,6 +23,7 @@ interface MyVideo {
   thumbnailUrl: string | null;
   likeCount: number;
   commentCount: number;
+  isPinned: boolean;
 }
 
 interface LikedVideo {
@@ -57,18 +58,22 @@ const Profile = () => {
       
       const { data, error } = await supabase
         .from('videos')
-        .select('id, thumbnail_url, like_count, comment_count')
+        .select('id, thumbnail_url, like_count, comment_count, is_pinned')
         .eq('creator_id', user.id)
         .eq('is_published', true)
         .order('created_at', { ascending: false });
       
       if (!error && data) {
-        setMyVideos(data.map(v => ({
+        const mapped = data.map(v => ({
           id: v.id,
           thumbnailUrl: v.thumbnail_url,
           likeCount: v.like_count,
           commentCount: v.comment_count,
-        })));
+          isPinned: v.is_pinned ?? false,
+        }));
+        // Sort pinned first
+        mapped.sort((a, b) => (a.isPinned === b.isPinned ? 0 : a.isPinned ? -1 : 1));
+        setMyVideos(mapped);
       }
       setVideosLoading(false);
     };
