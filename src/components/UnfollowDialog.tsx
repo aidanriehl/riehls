@@ -15,10 +15,7 @@ interface UnfollowDialogProps {
 
 export function UnfollowDialog({ open, onOpenChange }: UnfollowDialogProps) {
   const handleUnfollow = () => {
-    window.open(
-      'https://venmo.com/aidanriehll?txn=pay&amount=5&note=Unfollow%20fee',
-      '_blank'
-    );
+    // TODO: Implement Apple IAP for unfollow fee
     onOpenChange(false);
   };
 
