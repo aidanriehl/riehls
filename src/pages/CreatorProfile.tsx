@@ -192,7 +192,7 @@ const CreatorProfile = () => {
             />
             {video.isPinned && (
               <div className="absolute top-1.5 right-1.5">
-                <Pin className="w-4 h-4 text-white drop-shadow-md fill-white rotate-45" />
+                <Pin className="w-4 h-4 text-white drop-shadow-md fill-white rotate-45" strokeWidth={1.5} />
               </div>
             )}
           </div>
