@@ -257,6 +257,7 @@ export type Database = {
           created_at: string
           creator_id: string
           id: string
+          is_pinned: boolean
           is_published: boolean
           like_count: number
           thumbnail_url: string | null
@@ -268,6 +269,7 @@ export type Database = {
           created_at?: string
           creator_id: string
           id?: string
+          is_pinned?: boolean
           is_published?: boolean
           like_count?: number
           thumbnail_url?: string | null
@@ -279,6 +281,7 @@ export type Database = {
           created_at?: string
           creator_id?: string
           id?: string
+          is_pinned?: boolean
           is_published?: boolean
           like_count?: number
           thumbnail_url?: string | null

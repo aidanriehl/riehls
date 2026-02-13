@@ -12,6 +12,7 @@ export interface VideoWithCreator {
   createdAt: string;
   isLiked: boolean;
   isSaved: boolean;
+  isPinned: boolean;
   creator: {
     id: string;
     displayName: string | null;
@@ -41,6 +42,7 @@ export function useVideos() {
         comment_count,
         created_at,
         creator_id,
+        is_pinned,
         creator:profiles!videos_creator_id_fkey(id, display_name, avatar_url, username)
       `)
       .eq('is_published', true)
@@ -75,7 +77,8 @@ export function useVideos() {
       commentCount: v.comment_count,
       createdAt: v.created_at,
       isLiked: userLikes.has(v.id),
-      isSaved: false, // TODO: Implement saved videos table
+      isSaved: false,
+      isPinned: v.is_pinned ?? false,
       creator: v.creator ? {
         id: v.creator.id,
         displayName: v.creator.display_name,
@@ -144,10 +147,8 @@ export function useVideos() {
   }, [videos]);
 
   const deleteVideo = useCallback(async (videoId: string) => {
-    // Optimistic update - remove from local state
     setVideos((prev) => prev.filter((v) => v.id !== videoId));
 
-    // Delete from database
     const { error } = await supabase
       .from('videos')
       .delete()
@@ -155,12 +156,38 @@ export function useVideos() {
 
     if (error) {
       console.error('Error deleting video:', error);
-      // Refetch to restore state on error
       await fetchVideos();
       return false;
     }
     return true;
   }, []);
+
+  const togglePin = useCallback(async (videoId: string) => {
+    const video = videos.find(v => v.id === videoId);
+    if (!video) return;
+
+    const newPinned = !video.isPinned;
+
+    setVideos((prev) =>
+      prev.map((v) =>
+        v.id === videoId ? { ...v, isPinned: newPinned } : v
+      )
+    );
+
+    const { error } = await supabase
+      .from('videos')
+      .update({ is_pinned: newPinned })
+      .eq('id', videoId);
+
+    if (error) {
+      console.error('Error toggling pin:', error);
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === videoId ? { ...v, isPinned: !newPinned } : v
+        )
+      );
+    }
+  }, [videos]);
 
   return {
     videos,
@@ -170,6 +197,7 @@ export function useVideos() {
     getSavedVideos,
     getLikedVideos,
     deleteVideo,
+    togglePin,
     refetch: fetchVideos,
   };
 }

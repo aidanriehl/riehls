@@ -5,7 +5,7 @@ import { useVideos } from '@/hooks/useVideos';
 import { Loader2 } from 'lucide-react';
 
 export function ReelsFeed() {
-  const { videos, loading, toggleLike, toggleSave, deleteVideo } = useVideos();
+  const { videos, loading, toggleLike, toggleSave, deleteVideo, togglePin } = useVideos();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const startVideoId = searchParams.get('video');
@@ -80,6 +80,7 @@ export function ReelsFeed() {
           onLike={() => toggleLike(video.id)}
           onSave={() => toggleSave(video.id)}
           onDelete={() => deleteVideo(video.id)}
+          onPin={() => togglePin(video.id)}
           showBackButton={(fromCreatorProfileRef.current || fromProfileRef.current) && index === activeIndex}
           backDestination={fromProfileRef.current ? '/profile' : '/creator'}
         />

@@ -14,11 +14,12 @@ interface VideoPlayerProps {
   onLike: () => void;
   onSave: () => void;
   onDelete: () => void;
+  onPin?: () => void;
   showBackButton?: boolean;
   backDestination?: string;
 }
 
-export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBackButton = false, backDestination = '/creator' }: VideoPlayerProps) {
+export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, onPin, showBackButton = false, backDestination = '/creator' }: VideoPlayerProps) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -239,6 +240,8 @@ export function VideoPlayer({ video, isActive, onLike, onSave, onDelete, showBac
           createdAt={video.createdAt} 
           creator={video.creator} 
           onDelete={onDelete}
+          isPinned={(video as any).isPinned}
+          onPin={onPin}
         />
       </div>
 

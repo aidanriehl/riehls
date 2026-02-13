@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 interface CreatorVideo {
   id: string;
   thumbnailUrl: string | null;
+  isPinned: boolean;
 }
 
 const CreatorProfile = () => {
@@ -58,16 +59,19 @@ const CreatorProfile = () => {
       // Fetch admin's videos
       const { data: videosData } = await supabase
         .from('videos')
-        .select('id, thumbnail_url')
+        .select('id, thumbnail_url, is_pinned')
         .eq('creator_id', fetchedAdminUserId)
         .eq('is_published', true)
         .order('created_at', { ascending: false });
 
       if (videosData) {
-        setVideos(videosData.map(v => ({
+        const mapped = videosData.map(v => ({
           id: v.id,
           thumbnailUrl: v.thumbnail_url,
-        })));
+          isPinned: v.is_pinned ?? false,
+        }));
+        mapped.sort((a, b) => (a.isPinned === b.isPinned ? 0 : a.isPinned ? -1 : 1));
+        setVideos(mapped);
       }
       
       setLoading(false);
