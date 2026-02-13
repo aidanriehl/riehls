@@ -28,7 +28,7 @@ export function UnfollowDialog({ open, onOpenChange }: UnfollowDialogProps) {
             There's a small fee to unfollow...
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="flex flex-col gap-2 sm:flex-col">
+        <DialogFooter className="flex !flex-col gap-2 sm:!flex-col">
           <Button 
             variant="destructive" 
             onClick={handleUnfollow}
