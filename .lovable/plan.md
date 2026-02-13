@@ -1,43 +1,35 @@
 
 
-# Onboarding Background Image Implementation
+## Pin Videos to Top of Grid
 
-## Overview
-Add the uploaded photo as a full-screen background image on the onboarding page, positioned so the pointing finger aims at the "riehls" logo, with a dark overlay for text readability.
+### What it does
+Adds the ability for the admin/creator to pin videos so they appear first in the video grid on both the Profile and Creator Profile pages. A blue "Pin" button will appear next to the red "Delete" button on videos in the feed (admin only).
 
-## Visual Goal
-Based on your mockup:
-- Full-screen background image covering the entire viewport
-- Dark overlay (approximately 60-70% opacity) to ensure white text remains readable
-- Image positioned and scaled so the finger points upward toward the logo area
-- Form elements floating on top with their existing semi-transparent styling
-
-## Implementation Steps
-
-### Step 1: Copy Image to Project
-- Copy `user-uploads://IMG_1505.JPG` to `src/assets/onboarding-bg.jpg`
-- Using src/assets allows proper bundling and optimization
-
-### Step 2: Update Onboarding.tsx
-- Import the background image as an ES6 module
-- Add an absolute-positioned background container with:
-  - The image set as background with `object-cover` to fill the screen
-  - Positioning adjusted using `object-position` (e.g., `center 30%`) to frame the finger pointing upward
-  - A dark overlay layer (`bg-black/60`) on top of the image
-- Keep the existing form content positioned above the overlay
-- Remove the solid `bg-background` class from the main container
+### How it works
+- Pinned videos sort to the top of the grid
+- Tapping "Pin" on an already-pinned video will "Unpin" it
+- The button text toggles between "Pin" and "Unpin"
 
 ### Technical Details
 
-**Background structure:**
-```
-Container (relative, min-h-screen)
-├── Background Image (absolute, inset-0, z-0)
-├── Dark Overlay (absolute, inset-0, z-10, bg-black/60)
-└── Content (relative, z-20, existing form)
+**1. Database migration** -- Add `is_pinned` column to `videos` table:
+```sql
+ALTER TABLE public.videos ADD COLUMN is_pinned boolean NOT NULL DEFAULT false;
 ```
 
-**Image positioning:**
-- Use `object-cover` to fill the viewport while maintaining aspect ratio
-- Use `object-position: center 30%` (adjustable) to shift the image so the finger and face are positioned correctly relative to the logo
+**2. VideoCaption.tsx** -- Add a blue "Pin/Unpin" button next to the red "Delete" button (admin only):
+- New prop: `isPinned: boolean` and `onPin: () => void`
+- Blue text button showing "Pin" or "Unpin" based on current state
+
+**3. ReelsFeed.tsx / Index.tsx** -- Pass `isPinned` and `onPin` handler to VideoCaption, calling a toggle function that updates the database.
+
+**4. useVideos.ts** -- Add a `togglePin` function:
+- Optimistic local state update of `isPinned`
+- Supabase update: `UPDATE videos SET is_pinned = !current WHERE id = videoId`
+
+**5. Profile.tsx** -- Sort `myVideos` so pinned videos appear first in the grid. Optionally show a small pin icon overlay on pinned thumbnails.
+
+**6. CreatorProfile.tsx** -- Fetch `is_pinned` alongside other video fields, sort pinned videos first in the grid.
+
+**7. Types update** -- Add `isPinned` to the `VideoWithCreator` interface in `useVideos.ts`.
 
