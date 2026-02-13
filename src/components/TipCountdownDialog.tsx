@@ -26,18 +26,13 @@
          setCountdown(countdown - 1);
        }, 1000);
        return () => clearTimeout(timer);
-     } else if (countdown === 0 && !isComplete) {
-       setIsComplete(true);
-       // Open Venmo after countdown
-       window.open(
-         'https://venmo.com/aidanriehll?txn=pay&amount=5&note=Tip%20for%20great%20content%20🔥',
-         '_blank'
-       );
-       // Close dialog after a brief moment
-       setTimeout(() => {
-         onOpenChange(false);
-       }, 500);
-     }
+      } else if (countdown === 0 && !isComplete) {
+        setIsComplete(true);
+        // TODO: Implement Apple IAP for tipping
+        setTimeout(() => {
+          onOpenChange(false);
+        }, 500);
+      }
    }, [open, countdown, isComplete, onOpenChange]);
  
    const progress = ((5 - countdown) / 5) * 100;
