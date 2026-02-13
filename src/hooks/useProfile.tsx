@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -12,7 +12,7 @@ const convertToJpeg = async (file: File): Promise<Blob> => {
     const objectUrl = URL.createObjectURL(file);
     
     img.onload = () => {
-      URL.revokeObjectURL(objectUrl); // Clean up
+      URL.revokeObjectURL(objectUrl);
       canvas.width = img.width;
       canvas.height = img.height;
       ctx?.drawImage(img, 0, 0);
@@ -22,7 +22,7 @@ const convertToJpeg = async (file: File): Promise<Blob> => {
           else reject(new Error('Failed to convert image to JPEG'));
         },
         'image/jpeg',
-        0.9 // 90% quality
+        0.9
       );
     };
     
@@ -36,21 +36,31 @@ const convertToJpeg = async (file: File): Promise<Blob> => {
 };
 
 export interface Profile {
-   id: string;
-   username: string | null;
-   display_name: string | null;
-   avatar_url: string | null;
-   bio: string | null;
-   onboarding_complete: boolean;
-   created_at: string;
-   updated_at: string;
- }
- 
- export function useProfile() {
-   const { user } = useAuth();
-   const [profile, setProfile] = useState<Profile | null>(null);
-   const [loading, setLoading] = useState(true);
- 
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  onboarding_complete: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProfileContextType {
+  profile: Profile | null;
+  loading: boolean;
+  updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
+  uploadAvatar: (file: File, accessToken?: string) => Promise<{ error: Error | null; url: string | null }>;
+  refetch: () => Promise<void>;
+}
+
+const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
+
+export function ProfileProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -90,7 +100,7 @@ export interface Profile {
     };
   }, [user]);
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = useCallback(async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error('Not authenticated') };
 
     try {
@@ -104,7 +114,6 @@ export interface Profile {
         return { error };
       }
 
-      // Refetch profile after successful update
       const { data: updatedProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
@@ -122,9 +131,9 @@ export interface Profile {
       console.error('Update profile error:', err);
       return { error: err as Error };
     }
-  };
- 
-  const uploadAvatar = async (file: File, accessToken?: string) => {
+  }, [user]);
+
+  const uploadAvatar = useCallback(async (file: File, accessToken?: string) => {
     if (!user) return { error: new Error('Not authenticated'), url: null };
     if (!accessToken) return { error: new Error('No access token'), url: null };
 
@@ -161,21 +170,29 @@ export interface Profile {
     } catch (err) {
       return { error: err as Error, url: null };
     }
-  };
- 
-   return {
-     profile,
-     loading,
-     updateProfile,
-     uploadAvatar,
-    refetch: async () => {
-      if (!user) return;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      if (!error && data) setProfile(data);
-    },
-   };
- }
+  }, [user, updateProfile]);
+
+  const refetch = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (!error && data) setProfile(data);
+  }, [user]);
+
+  return (
+    <ProfileContext.Provider value={{ profile, loading, updateProfile, uploadAvatar, refetch }}>
+      {children}
+    </ProfileContext.Provider>
+  );
+}
+
+export function useProfile() {
+  const context = useContext(ProfileContext);
+  if (context === undefined) {
+    throw new Error('useProfile must be used within a ProfileProvider');
+  }
+  return context;
+}

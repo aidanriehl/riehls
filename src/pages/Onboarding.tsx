@@ -139,8 +139,11 @@ export default function Onboarding() {
       return;
     }
 
+    // Set recently authenticated flag
+    localStorage.setItem('recentlyAuthenticated', 'true');
+    setTimeout(() => localStorage.removeItem('recentlyAuthenticated'), 30000);
+
     // onAuthStateChange will update the user, then we navigate
-    // Small delay to allow state to update
     setTimeout(() => {
       navigate('/', { replace: true });
     }, 500);

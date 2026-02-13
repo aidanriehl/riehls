@@ -32,8 +32,16 @@ export const ProtectedRoute = forwardRef<HTMLDivElement, ProtectedRouteProps>(
       );
     }
 
-    // If no user, redirect to auth for anonymous sign-in
+    // If no user, check for recently authenticated flag before redirecting
     if (!user) {
+      const recentlyAuth = localStorage.getItem('recentlyAuthenticated') === 'true';
+      if (recentlyAuth) {
+        return (
+          <div ref={ref} className="h-screen w-full flex items-center justify-center bg-background">
+            <div className="animate-pulse text-muted-foreground">Loading...</div>
+          </div>
+        );
+      }
       return <Navigate to="/auth" state={{ from: location }} replace />;
     }
 
