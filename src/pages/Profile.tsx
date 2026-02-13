@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Heart, Grid3X3, MessageCircle, ArrowLeft, Camera } from 'lucide-react';
+import { Settings, Heart, Grid3X3, MessageCircle, ArrowLeft, Camera, Pin } from 'lucide-react';
 import { BottomNav } from '@/components/BottomNav';
 import { NotificationsList } from '@/components/NotificationsList';
 import { ProfileSettingsSheet } from '@/components/ProfileSettingsSheet';
@@ -317,6 +317,12 @@ const Profile = () => {
                     alt="" 
                     className="w-full h-full object-cover"
                   />
+                  {/* Pin icon for pinned videos */}
+                  {video.isPinned && (
+                    <div className="absolute top-1.5 right-1.5">
+                      <Pin className="w-4 h-4 text-white drop-shadow-md fill-white rotate-45" />
+                    </div>
+                  )}
                   {/* Admin overlay with counts */}
                   {isAdmin && (
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 flex justify-between text-white text-xs font-medium">

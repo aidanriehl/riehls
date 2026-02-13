@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Grid3X3 } from 'lucide-react';
+import { ArrowLeft, Grid3X3, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UnfollowDialog } from '@/components/UnfollowDialog';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -182,7 +182,7 @@ const CreatorProfile = () => {
         {videos.map((video) => (
           <div 
             key={video.id} 
-            className="aspect-square bg-muted cursor-pointer"
+            className="aspect-square bg-muted cursor-pointer relative"
             onClick={() => navigate(`/?video=${video.id}`, { state: { fromCreatorProfile: true } })}
           >
             <img 
@@ -190,6 +190,11 @@ const CreatorProfile = () => {
               alt="" 
               className="w-full h-full object-cover"
             />
+            {video.isPinned && (
+              <div className="absolute top-1.5 right-1.5">
+                <Pin className="w-4 h-4 text-white drop-shadow-md fill-white rotate-45" />
+              </div>
+            )}
           </div>
         ))}
       </div>
