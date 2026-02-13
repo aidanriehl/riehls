@@ -3,8 +3,9 @@
  import { TooltipProvider } from "@/components/ui/tooltip";
  import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
  import { BrowserRouter, Routes, Route } from "react-router-dom";
- import { AuthProvider } from "@/hooks/useAuth";
- import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProfileProvider } from "@/hooks/useProfile";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
  import Index from "./pages/Index";
  import Profile from "./pages/Profile";
  import CreatorProfile from "./pages/CreatorProfile";
@@ -21,9 +22,10 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
      <AuthProvider>
-       <TooltipProvider>
-         <Toaster />
-         <Sonner position="top-center" />
+       <ProfileProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner position="top-center" />
          <BrowserRouter>
            <Routes>
              <Route path="/auth" element={<Auth />} />
@@ -71,7 +73,8 @@ const App = () => (
              <Route path="*" element={<NotFound />} />
            </Routes>
          </BrowserRouter>
-       </TooltipProvider>
+        </TooltipProvider>
+       </ProfileProvider>
      </AuthProvider>
   </QueryClientProvider>
 );

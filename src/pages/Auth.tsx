@@ -20,6 +20,10 @@ export default function Auth() {
       const { error } = await signInAnonymously();
       if (error) {
         console.error('Anonymous sign-in failed:', error);
+      } else {
+        // Set recently authenticated flag to prevent race condition redirects
+        localStorage.setItem('recentlyAuthenticated', 'true');
+        setTimeout(() => localStorage.removeItem('recentlyAuthenticated'), 30000);
       }
       // onAuthStateChange will handle navigation after successful sign-in
     };
