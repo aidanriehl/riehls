@@ -75,16 +75,16 @@
              </div>
            </div>
  
-           {/* Text */}
-           <div className="text-center space-y-2">
-             <div className="flex items-center justify-center gap-2">
-               <DollarSign className="w-5 h-5 text-[hsl(var(--dm-sent))]" />
-               <span className="text-xl font-semibold">Sending $5</span>
-             </div>
-             <p className="text-sm text-muted-foreground">
-               to Aidan via Venmo
-             </p>
-           </div>
+            {/* Text */}
+            <div className="text-center space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <DollarSign className="w-5 h-5 text-[hsl(var(--dm-sent))]" />
+                <span className="text-xl font-semibold">Sending $5</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                to Aidan
+              </p>
+            </div>
          </div>
        </DialogContent>
      </Dialog>
